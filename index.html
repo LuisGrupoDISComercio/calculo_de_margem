@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dis. Comércio — Tabela de Margem</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <h1>Dis. Comércio — Tabela de Margem</h1>
+  <span id="info-data">Carregando…</span>
+</header>
+
+<div class="custos-panel">
+  <h2>Estrutura de Custos (Cálculo de Margem)</h2>
+  <div class="custo-item"><label>Custo Variável:</label><span id="cv">—</span></div>
+  <div class="custo-item"><label>Partilha:</label><span id="pt">—</span></div>
+  <div class="custo-item"><label>Comissão Parc.:</label><span id="cp">—</span></div>
+  <div class="custo-item"><label>Taxa Cartão:</label><span id="tc">—</span></div>
+  <div class="custo-item"><label>Frete:</label><span id="fr">—</span></div>
+  <div class="custo-item"><label>Total Variável:</label><span id="tv">—</span></div>
+  <div class="custo-item"><label>Custo Fixo:</label><span id="cf">—</span></div>
+  <div class="custo-item"><label>Total Var. + Fixo:</label><span id="tvf">—</span></div>
+</div>
+
+<div class="calc-panel">
+  <h2>Calculadora de Margem</h2>
+  <div class="calc-grid">
+    <div class="field"><label>Preço de Custo (R$)</label><input type="number" id="calc-custo" placeholder="Ex: 2000" step="0.01" min="0" /></div>
+    <div class="field"><label>Preço de Venda (R$)</label><input type="number" id="calc-venda" placeholder="Ex: 3000" step="0.01" min="0" /></div>
+    <div class="field"><label>Forma de pagamento</label>
+      <select id="calc-forma">
+        <option value="vista">À Vista</option>
+        <option value="dez_x">10x (parcelado)</option>
+      </select>
+    </div>
+    <div class="field"><label>Desconto (%)</label><input type="number" id="calc-desc" placeholder="Ex: 5" step="0.1" min="0" max="100" /></div>
+    <div class="field" style="align-self:flex-end">
+      <button onclick="calcularMargem()" style="background:#1a3a5c;color:#fff;border:none;border-radius:4px;padding:7px 18px;cursor:pointer;font-size:13px;font-weight:700;">Calcular</button>
+    </div>
+  </div>
+  <div class="calc-results" id="calc-results" style="display:none">
+    <div class="result-box" id="rb-vista"><div class="r-label">Preço Final</div><div class="r-value" id="rv-final">—</div></div>
+    <div class="result-box" id="rb-mb"><div class="r-label">Margem Bruta</div><div class="r-value" id="rv-mb">—</div></div>
+    <div class="result-box" id="rb-ml"><div class="r-label">Margem Líquida</div><div class="r-value" id="rv-ml">—</div></div>
+    <div class="result-box" id="rb-lucro"><div class="r-label">Lucro Líquido (R$)</div><div class="r-value" id="rv-lucro">—</div></div>
+  </div>
+</div>
+
+<div class="filters">
+  <div class="field"><label>Buscar</label><input type="text" id="f-busca" placeholder="Código, descrição…" oninput="aplicarFiltros()" /></div>
+  <div class="field"><label>Fabricante</label><select id="f-fab" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+  <div class="field"><label>BTUs</label><select id="f-btu" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+  <div class="field"><label>Ciclo</label>
+    <select id="f-ciclo" onchange="aplicarFiltros()">
+      <option value="">Todos</option>
+      <option value="F">Frio (F)</option>
+      <option value="QF">Quente/Frio (QF)</option>
+    </select>
+  </div>
+  <div class="field"><label>Origem</label>
+    <select id="f-origem" onchange="aplicarFiltros()">
+      <option value="">Todas</option>
+      <option value="NACIONAL">Nacional</option>
+      <option value="IMPORTADO">Importado</option>
+    </select>
+  </div>
+  <div class="field"><label>Apenas com estoque</label>
+    <select id="f-estoque" onchange="aplicarFiltros()">
+      <option value="">Todos</option>
+      <option value="1">Com estoque</option>
+      <option value="0">Sem estoque</option>
+    </select>
+  </div>
+  <button class="btn-limpar" onclick="limparFiltros()">Limpar</button>
+  <button class="btn-exportar" onclick="exportarCSV()">Exportar CSV</button>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-card"><div class="s-label">Total de Itens</div><div class="s-value" id="stat-total">—</div></div>
+  <div class="stat-card"><div class="s-label">Itens com Estoque</div><div class="s-value" id="stat-estoque">—</div></div>
+  <div class="stat-card"><div class="s-label">MB Média</div><div class="s-value" id="stat-mb">—</div></div>
+  <div class="stat-card"><div class="s-label">Fabricantes</div><div class="s-value" id="stat-fab">—</div></div>
+  <div class="stat-card"><div class="s-label">Nacionais / Importados</div><div class="s-value" id="stat-orig">—</div></div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="ordenar('fabricante')">Fabricante <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('btus')">BTUs <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('ciclo')">Ciclo <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('cod')">Cód. <span class="sort-icon">⇅</span></th>
+        <th>Descrição</th>
+        <th onclick="ordenar('estoque')">Estoque <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('custo')">Custo (R$) <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('vista')">À Vista (R$) <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('dez_x')">10x (R$) <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('ml')">ML% <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('mb')">MB% <span class="sort-icon">⇅</span></th>
+        <th onclick="ordenar('origem')">Origem <span class="sort-icon">⇅</span></th>
+      </tr>
+    </thead>
+    <tbody id="tabela-body"></tbody>
+  </table>
+</div>
+<div class="paginacao" id="paginacao"></div>
+
+<script src="data.js"></script>
+<script>
+const POR_PAGINA = 50;
+let dadosFiltrados = [];
+let paginaAtual = 1;
+let ordemCol = '';
+let ordemAsc = true;
+
+function pct(v){ return (v*100).toFixed(1)+'%'; }
+function moeda(v){ return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('cv').textContent  = pct(CUSTOS.custo_variavel);
+  document.getElementById('pt').textContent  = CUSTOS.partilha;
+  document.getElementById('cp').textContent  = pct(CUSTOS.comissao_parc);
+  document.getElementById('tc').textContent  = pct(CUSTOS.taxa_cartao);
+  document.getElementById('fr').textContent  = pct(CUSTOS.frete);
+  document.getElementById('tv').textContent  = pct(CUSTOS.total_variavel);
+  document.getElementById('cf').textContent  = pct(CUSTOS.custo_fixo);
+  document.getElementById('tvf').textContent = pct(CUSTOS.total_variavel_fixo);
+  document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
+
+  const fabs = [...new Set(PRODUTOS.map(p=>p.fabricante))].sort();
+  const selFab = document.getElementById('f-fab');
+  fabs.forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; selFab.appendChild(o); });
+
+  const btus = [...new Set(PRODUTOS.map(p=>p.btus))].sort((a,b)=>a-b);
+  const selBtu = document.getElementById('f-btu');
+  btus.forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=b===0?'—':b; selBtu.appendChild(o); });
+
+  aplicarFiltros();
+});
+
+function aplicarFiltros(){
+  const busca   = document.getElementById('f-busca').value.toLowerCase();
+  const fab     = document.getElementById('f-fab').value;
+  const btu     = document.getElementById('f-btu').value;
+  const ciclo   = document.getElementById('f-ciclo').value;
+  const origem  = document.getElementById('f-origem').value;
+  const estoque = document.getElementById('f-estoque').value;
+
+  dadosFiltrados = PRODUTOS.filter(p=>{
+    if(fab && p.fabricante !== fab) return false;
+    if(btu && p.btus !== parseInt(btu)) return false;
+    if(ciclo && p.ciclo.toUpperCase() !== ciclo) return false;
+    if(origem && p.origem !== origem) return false;
+    if(estoque==='1' && p.estoque<=0) return false;
+    if(estoque==='0' && p.estoque>0) return false;
+    if(busca){
+      const txt = (p.cod+' '+p.descricao).toLowerCase();
+      if(!txt.includes(busca)) return false;
+    }
+    return true;
+  });
+
+  if(ordemCol) aplicarOrdem();
+  paginaAtual = 1;
+  atualizarStats();
+  renderTabela();
+  renderPaginacao();
+}
+
+function limparFiltros(){
+  document.getElementById('f-busca').value='';
+  document.getElementById('f-fab').value='';
+  document.getElementById('f-btu').value='';
+  document.getElementById('f-ciclo').value='';
+  document.getElementById('f-origem').value='';
+  document.getElementById('f-estoque').value='';
+  aplicarFiltros();
+}
+
+function ordenar(col){
+  if(ordemCol===col){ ordemAsc=!ordemAsc; } else { ordemCol=col; ordemAsc=true; }
+  aplicarOrdem();
+  renderTabela();
+  renderPaginacao();
+}
+
+function aplicarOrdem(){
+  dadosFiltrados.sort((a,b)=>{
+    let va=a[ordemCol], vb=b[ordemCol];
+    if(typeof va==='string') va=va.toLowerCase();
+    if(typeof vb==='string') vb=vb.toLowerCase();
+    if(va<vb) return ordemAsc?-1:1;
+    if(va>vb) return ordemAsc?1:-1;
+    return 0;
+  });
+}
+
+function atualizarStats(){
+  const total = dadosFiltrados.length;
+  const comEst = dadosFiltrados.filter(p=>p.estoque>0).length;
+  const mbValidos = dadosFiltrados.filter(p=>p.mb!==0);
+  const mbMedia = mbValidos.length ? mbValidos.reduce((s,p)=>s+p.mb,0)/mbValidos.length : 0;
+  const fabs = new Set(dadosFiltrados.map(p=>p.fabricante)).size;
+  const nac = dadosFiltrados.filter(p=>p.origem==='NACIONAL').length;
+  const imp = dadosFiltrados.filter(p=>p.origem==='IMPORTADO').length;
+
+  document.getElementById('stat-total').textContent   = total;
+  document.getElementById('stat-estoque').textContent = comEst;
+  document.getElementById('stat-mb').textContent      = pct(mbMedia);
+  document.getElementById('stat-fab').textContent     = fabs;
+  document.getElementById('stat-orig').textContent    = nac+' / '+imp;
+}
+
+function renderTabela(){
+  const inicio = (paginaAtual-1)*POR_PAGINA;
+  const pagina = dadosFiltrados.slice(inicio, inicio+POR_PAGINA);
+  const tbody = document.getElementById('tabela-body');
+
+  if(!pagina.length){ tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#999;">Nenhum produto encontrado.</td></tr>'; return; }
+
+  tbody.innerHTML = pagina.map(p=>{
+    const cicBadge = p.ciclo==='F'?'badge-F':p.ciclo==='QF'?'badge-QF':'badge-dash';
+    const origBadge = p.origem==='NACIONAL'?'<span class="badge badge-nac">NAC</span>':'<span class="badge badge-imp">IMP</span>';
+    const estClass = p.estoque>0?'estoque-ok':'estoque-zero';
+    const custoTxt = p.custo>0?moeda(p.custo):'<span class="custo-zero">—</span>';
+    const vistaTxt = p.vista>0?moeda(p.vista):'<span class="custo-zero">—</span>';
+    const dezTxt   = p.dez_x>0?moeda(p.dez_x):'<span class="custo-zero">—</span>';
+    const mlClass  = p.ml>=0?'mb-pos':'mb-neg';
+    const mbClass  = p.mb>=0?'mb-pos':'mb-neg';
+    return `<tr>
+      <td>${p.fabricante}</td>
+      <td>${p.btus||'—'}</td>
+      <td><span class="badge ${cicBadge}">${p.ciclo}</span></td>
+      <td>${p.cod}</td>
+      <td>${p.descricao}</td>
+      <td class="${estClass}">${p.estoque}</td>
+      <td>${custoTxt}</td>
+      <td>${vistaTxt}</td>
+      <td>${dezTxt}</td>
+      <td class="${mlClass}">${p.ml?pct(p.ml):'—'}</td>
+      <td class="${mbClass}">${p.mb?pct(p.mb):'—'}</td>
+      <td>${origBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPaginacao(){
+  const totalPag = Math.ceil(dadosFiltrados.length/POR_PAGINA);
+  const nav = document.getElementById('paginacao');
+  if(totalPag<=1){ nav.innerHTML=''; return; }
+  let html=`<span>Página ${paginaAtual} de ${totalPag} (${dadosFiltrados.length} registros)</span>`;
+  html+=`<button onclick="mudarPagina(${Math.max(1,paginaAtual-1)})"><</button>`;
+  for(let i=1;i<=totalPag;i++){
+    if(i===1||i===totalPag||Math.abs(i-paginaAtual)<=2){
+      html+=`<button onclick="mudarPagina(${i})" class="${i===paginaAtual?'active':''}">${i}</button>`;
+    } else if(i===2&&paginaAtual>4){
+      html+=`<span>…</span>`;
+    } else if(i===totalPag-1&&paginaAtual<totalPag-3){
+      html+=`<span>…</span>`;
+    }
+  }
+  html+=`<button onclick="mudarPagina(${Math.min(totalPag,paginaAtual+1)})">></button>`;
+  nav.innerHTML=html;
+}
+
+function mudarPagina(p){ paginaAtual=p; renderTabela(); renderPaginacao(); }
+
+function exportarCSV(){
+  if(!dadosFiltrados.length){ alert('Nenhum dado para exportar.'); return; }
+  const header=['Fabricante','BTUs','Ciclo','Codigo','Descricao','Estoque','Custo','Vista','10x','ML','MB','Origem'];
+  const linhas=dadosFiltrados.map(p=>[
+    p.fabricante,p.btus,p.ciclo,p.cod,
+    `"${(p.descricao||'').replace(/"/g,'""')}"`,
+    p.estoque,p.custo,p.vista,p.dez_x,p.ml,p.mb,p.origem
+  ].join(';'));
+  const blob=new Blob([header.join(';')+'\n'+linhas.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='tabela_margem.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function calcularMargem(){
+  const custo=parseFloat(document.getElementById('calc-custo').value||'0');
+  let venda=parseFloat(document.getElementById('calc-venda').value||'0');
+  const forma=document.getElementById('calc-forma').value;
+  const desc=parseFloat(document.getElementById('calc-desc').value||'0');
+  if(!custo||!venda){ alert('Informe custo e preço de venda.'); return; }
+  if(desc>0) venda=venda*(1-desc/100);
+  const mb=(venda-custo)/venda;
+  let totalDesp=CUSTOS.total_variavel+CUSTOS.custo_fixo;
+  if(forma==='dez_x') totalDesp+=CUSTOS.comissao_parc+CUSTOS.taxa_cartao;
+  const custoDesp=venda*totalDesp;
+  const ml=(venda-custo-custoDesp)/venda;
+  const lucro=venda-custo-custoDesp;
+  const box=document.getElementById('calc-results');
+  box.style.display='flex';
+  document.getElementById('rv-final').textContent=moeda(venda);
+  document.getElementById('rv-mb').textContent=(mb*100).toFixed(1)+'%';
+  document.getElementById('rv-ml').textContent=(ml*100).toFixed(1)+'%';
+  document.getElementById('rv-lucro').textContent=moeda(lucro);
+  document.getElementById('rb-mb').classList.toggle('positive',mb>=0);
+  document.getElementById('rb-mb').classList.toggle('negative',mb<0);
+  document.getElementById('rb-ml').classList.toggle('positive',ml>=0);
+  document.getElementById('rb-ml').classList.toggle('negative',ml<0);
+}
+</script>
+</body>
+</html>
