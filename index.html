@@ -11,7 +11,6 @@
   <h1>Dis. Comércio — Tabela de Margem</h1>
   <span id="info-data">Carregando…</span>
 </header>
-
 <div class="custos-panel">
   <h2>Estrutura de Custos (Cálculo de Margem)</h2>
   <div class="custo-item"><label>Custo Variável:</label><span id="cv">—</span></div>
@@ -23,7 +22,6 @@
   <div class="custo-item"><label>Custo Fixo:</label><span id="cf">—</span></div>
   <div class="custo-item"><label>Total Var. + Fixo:</label><span id="tvf">—</span></div>
 </div>
-
 <div class="calc-panel">
   <h2>Calculadora de Margem</h2>
   <div class="calc-grid">
@@ -47,7 +45,6 @@
     <div class="result-box" id="rb-lucro"><div class="r-label">Lucro Líquido (R$)</div><div class="r-value" id="rv-lucro">—</div></div>
   </div>
 </div>
-
 <div class="filters">
   <div class="field"><label>Buscar</label><input type="text" id="f-busca" placeholder="Código, descrição…" oninput="aplicarFiltros()" /></div>
   <div class="field"><label>Fabricante</label><select id="f-fab" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
@@ -76,7 +73,6 @@
   <button class="btn-limpar" onclick="limparFiltros()">Limpar</button>
   <button class="btn-exportar" onclick="exportarCSV()">Exportar CSV</button>
 </div>
-
 <div class="stats-bar">
   <div class="stat-card"><div class="s-label">Total de Itens</div><div class="s-value" id="stat-total">—</div></div>
   <div class="stat-card"><div class="s-label">Itens com Estoque</div><div class="s-value" id="stat-estoque">—</div></div>
@@ -84,7 +80,6 @@
   <div class="stat-card"><div class="s-label">Fabricantes</div><div class="s-value" id="stat-fab">—</div></div>
   <div class="stat-card"><div class="s-label">Nacionais / Importados</div><div class="s-value" id="stat-orig">—</div></div>
 </div>
-
 <div class="table-wrap">
   <table>
     <thead>
@@ -107,7 +102,6 @@
   </table>
 </div>
 <div class="paginacao" id="paginacao"></div>
-
 <script src="data.js"></script>
 <script>
 const POR_PAGINA = 50;
@@ -136,30 +130,27 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const btus = [...new Set(PRODUTOS.map(p=>p.btus))].sort((a,b)=>a-b);
   const selBtu = document.getElementById('f-btu');
-  btus.forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=b===0?'—':b; selBtu.appendChild(o); });
+  btus.forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=b; selBtu.appendChild(o); });
 
   aplicarFiltros();
 });
 
 function aplicarFiltros(){
-  const busca   = document.getElementById('f-busca').value.toLowerCase();
-  const fab     = document.getElementById('f-fab').value;
-  const btu     = document.getElementById('f-btu').value;
-  const ciclo   = document.getElementById('f-ciclo').value;
-  const origem  = document.getElementById('f-origem').value;
-  const estoque = document.getElementById('f-estoque').value;
+  const busca  = document.getElementById('f-busca').value.toLowerCase();
+  const fab    = document.getElementById('f-fab').value;
+  const btu    = document.getElementById('f-btu').value;
+  const ciclo  = document.getElementById('f-ciclo').value;
+  const origem = document.getElementById('f-origem').value;
+  const est    = document.getElementById('f-estoque').value;
 
   dadosFiltrados = PRODUTOS.filter(p=>{
     if(fab && p.fabricante !== fab) return false;
     if(btu && p.btus !== parseInt(btu)) return false;
     if(ciclo && p.ciclo.toUpperCase() !== ciclo) return false;
     if(origem && p.origem !== origem) return false;
-    if(estoque==='1' && p.estoque<=0) return false;
-    if(estoque==='0' && p.estoque>0) return false;
-    if(busca){
-      const txt = (p.cod+' '+p.descricao).toLowerCase();
-      if(!txt.includes(busca)) return false;
-    }
+    if(est==='1' && p.estoque<=0) return false;
+    if(est==='0' && p.estoque>0) return false;
+    if(busca){ const txt=(p.cod+' '+p.descricao).toLowerCase(); if(!txt.includes(busca)) return false; }
     return true;
   });
 
@@ -171,45 +162,37 @@ function aplicarFiltros(){
 }
 
 function limparFiltros(){
-  document.getElementById('f-busca').value='';
-  document.getElementById('f-fab').value='';
-  document.getElementById('f-btu').value='';
-  document.getElementById('f-ciclo').value='';
-  document.getElementById('f-origem').value='';
-  document.getElementById('f-estoque').value='';
+  ['f-busca','f-fab','f-btu','f-ciclo','f-origem','f-estoque'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el.tagName==='INPUT') el.value=''; else el.value='';
+  });
   aplicarFiltros();
 }
 
 function ordenar(col){
   if(ordemCol===col){ ordemAsc=!ordemAsc; } else { ordemCol=col; ordemAsc=true; }
-  aplicarOrdem();
-  renderTabela();
-  renderPaginacao();
+  aplicarOrdem(); renderTabela(); renderPaginacao();
 }
 
 function aplicarOrdem(){
   dadosFiltrados.sort((a,b)=>{
     let va=a[ordemCol], vb=b[ordemCol];
-    if(typeof va==='string') va=va.toLowerCase();
-    if(typeof vb==='string') vb=vb.toLowerCase();
-    if(va<vb) return ordemAsc?-1:1;
-    if(va>vb) return ordemAsc?1:-1;
-    return 0;
+    if(typeof va==='string'){ va=va.toLowerCase(); vb=vb.toLowerCase(); }
+    return va<vb ? (ordemAsc?-1:1) : va>vb ? (ordemAsc?1:-1) : 0;
   });
 }
 
 function atualizarStats(){
-  const total = dadosFiltrados.length;
+  const total  = dadosFiltrados.length;
   const comEst = dadosFiltrados.filter(p=>p.estoque>0).length;
-  const mbValidos = dadosFiltrados.filter(p=>p.mb!==0);
-  const mbMedia = mbValidos.length ? mbValidos.reduce((s,p)=>s+p.mb,0)/mbValidos.length : 0;
-  const fabs = new Set(dadosFiltrados.map(p=>p.fabricante)).size;
-  const nac = dadosFiltrados.filter(p=>p.origem==='NACIONAL').length;
-  const imp = dadosFiltrados.filter(p=>p.origem==='IMPORTADO').length;
-
+  const mbVal  = dadosFiltrados.filter(p=>p.mb!==0);
+  const mbMed  = mbVal.length ? mbVal.reduce((s,p)=>s+p.mb,0)/mbVal.length : 0;
+  const fabs   = new Set(dadosFiltrados.map(p=>p.fabricante)).size;
+  const nac    = dadosFiltrados.filter(p=>p.origem==='NACIONAL').length;
+  const imp    = dadosFiltrados.filter(p=>p.origem==='IMPORTADO').length;
   document.getElementById('stat-total').textContent   = total;
   document.getElementById('stat-estoque').textContent = comEst;
-  document.getElementById('stat-mb').textContent      = pct(mbMedia);
+  document.getElementById('stat-mb').textContent      = pct(mbMed);
   document.getElementById('stat-fab').textContent     = fabs;
   document.getElementById('stat-orig').textContent    = nac+' / '+imp;
 }
@@ -217,31 +200,29 @@ function atualizarStats(){
 function renderTabela(){
   const inicio = (paginaAtual-1)*POR_PAGINA;
   const pagina = dadosFiltrados.slice(inicio, inicio+POR_PAGINA);
-  const tbody = document.getElementById('tabela-body');
-
+  const tbody  = document.getElementById('tabela-body');
   if(!pagina.length){ tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#999;">Nenhum produto encontrado.</td></tr>'; return; }
-
   tbody.innerHTML = pagina.map(p=>{
     const cicBadge = p.ciclo==='F'?'badge-F':p.ciclo==='QF'?'badge-QF':'badge-dash';
     const origBadge = p.origem==='NACIONAL'?'<span class="badge badge-nac">NAC</span>':'<span class="badge badge-imp">IMP</span>';
-    const estClass = p.estoque>0?'estoque-ok':'estoque-zero';
-    const custoTxt = p.custo>0?moeda(p.custo):'<span class="custo-zero">—</span>';
-    const vistaTxt = p.vista>0?moeda(p.vista):'<span class="custo-zero">—</span>';
-    const dezTxt   = p.dez_x>0?moeda(p.dez_x):'<span class="custo-zero">—</span>';
-    const mlClass  = p.ml>=0?'mb-pos':'mb-neg';
-    const mbClass  = p.mb>=0?'mb-pos':'mb-neg';
+    const estClass  = p.estoque>0?'estoque-ok':'estoque-zero';
+    const custoTxt  = p.custo>0?moeda(p.custo):'<span class="custo-zero">—</span>';
+    const vistaTxt  = p.vista>0?moeda(p.vista):'<span class="custo-zero">—</span>';
+    const dezTxt    = p.dez_x>0?moeda(p.dez_x):'<span class="custo-zero">—</span>';
+    const mlClass   = p.ml>=0?'mb-pos':'mb-neg';
+    const mbClass   = p.mb>=0?'mb-pos':'mb-neg';
     return `<tr>
       <td>${p.fabricante}</td>
       <td>${p.btus||'—'}</td>
       <td><span class="badge ${cicBadge}">${p.ciclo}</span></td>
       <td>${p.cod}</td>
-      <td>${p.descricao}</td>
+      <td style="white-space:normal;max-width:320px">${p.descricao}</td>
       <td class="${estClass}">${p.estoque}</td>
       <td>${custoTxt}</td>
       <td>${vistaTxt}</td>
       <td>${dezTxt}</td>
-      <td class="${mlClass}">${p.ml?pct(p.ml):'—'}</td>
-      <td class="${mbClass}">${p.mb?pct(p.mb):'—'}</td>
+      <td class="${mlClass}">${p.ml!==0?(p.ml*100).toFixed(1)+'%':'—'}</td>
+      <td class="${mbClass}">${p.mb!==0?(p.mb*100).toFixed(1)+'%':'—'}</td>
       <td>${origBadge}</td>
     </tr>`;
   }).join('');
@@ -251,62 +232,50 @@ function renderPaginacao(){
   const totalPag = Math.ceil(dadosFiltrados.length/POR_PAGINA);
   const nav = document.getElementById('paginacao');
   if(totalPag<=1){ nav.innerHTML=''; return; }
-  let html=`<span>Página ${paginaAtual} de ${totalPag} (${dadosFiltrados.length} registros)</span>`;
-  html+=`<button onclick="mudarPagina(${Math.max(1,paginaAtual-1)})"><</button>`;
+  let html = `<button onclick="mudarPagina(${Math.max(1,paginaAtual-1)})"><</button>`;
   for(let i=1;i<=totalPag;i++){
-    if(i===1||i===totalPag||Math.abs(i-paginaAtual)<=2){
-      html+=`<button onclick="mudarPagina(${i})" class="${i===paginaAtual?'active':''}">${i}</button>`;
-    } else if(i===2&&paginaAtual>4){
-      html+=`<span>…</span>`;
-    } else if(i===totalPag-1&&paginaAtual<totalPag-3){
-      html+=`<span>…</span>`;
-    }
+    if(i===1||i===totalPag||Math.abs(i-paginaAtual)<=2)
+      html+=`<button class="${i===paginaAtual?'active':''}" onclick="mudarPagina(${i})">${i}</button>`;
+    else if(Math.abs(i-paginaAtual)===3) html+=`<span>…</span>`;
   }
   html+=`<button onclick="mudarPagina(${Math.min(totalPag,paginaAtual+1)})">></button>`;
-  nav.innerHTML=html;
+  nav.innerHTML = html;
 }
-
 function mudarPagina(p){ paginaAtual=p; renderTabela(); renderPaginacao(); }
 
 function exportarCSV(){
   if(!dadosFiltrados.length){ alert('Nenhum dado para exportar.'); return; }
-  const header=['Fabricante','BTUs','Ciclo','Codigo','Descricao','Estoque','Custo','Vista','10x','ML','MB','Origem'];
-  const linhas=dadosFiltrados.map(p=>[
+  const header = ['Fabricante','BTUs','Ciclo','Codigo','Descricao','Estoque','Custo','Vista','10x','ML','MB','Origem'];
+  const linhas = dadosFiltrados.map(p=>[
     p.fabricante,p.btus,p.ciclo,p.cod,
     `"${(p.descricao||'').replace(/"/g,'""')}"`,
     p.estoque,p.custo,p.vista,p.dez_x,p.ml,p.mb,p.origem
   ].join(';'));
-  const blob=new Blob([header.join(';')+'\n'+linhas.join('\n')],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='tabela_margem.csv';
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+  const blob = new Blob([header.join(';')+'\n'+linhas.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='tabela_margem.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function calcularMargem(){
-  const custo=parseFloat(document.getElementById('calc-custo').value||'0');
-  let venda=parseFloat(document.getElementById('calc-venda').value||'0');
-  const forma=document.getElementById('calc-forma').value;
-  const desc=parseFloat(document.getElementById('calc-desc').value||'0');
+  const custo = parseFloat(document.getElementById('calc-custo').value||'0');
+  let venda   = parseFloat(document.getElementById('calc-venda').value||'0');
+  const forma = document.getElementById('calc-forma').value;
+  const desc  = parseFloat(document.getElementById('calc-desc').value||'0');
   if(!custo||!venda){ alert('Informe custo e preço de venda.'); return; }
   if(desc>0) venda=venda*(1-desc/100);
-  const mb=(venda-custo)/venda;
-  let totalDesp=CUSTOS.total_variavel+CUSTOS.custo_fixo;
+  const mb = (venda-custo)/venda;
+  let totalDesp = CUSTOS.total_variavel+CUSTOS.custo_fixo;
   if(forma==='dez_x') totalDesp+=CUSTOS.comissao_parc+CUSTOS.taxa_cartao;
-  const custoDesp=venda*totalDesp;
-  const ml=(venda-custo-custoDesp)/venda;
-  const lucro=venda-custo-custoDesp;
-  const box=document.getElementById('calc-results');
-  box.style.display='flex';
-  document.getElementById('rv-final').textContent=moeda(venda);
-  document.getElementById('rv-mb').textContent=(mb*100).toFixed(1)+'%';
-  document.getElementById('rv-ml').textContent=(ml*100).toFixed(1)+'%';
-  document.getElementById('rv-lucro').textContent=moeda(lucro);
-  document.getElementById('rb-mb').classList.toggle('positive',mb>=0);
-  document.getElementById('rb-mb').classList.toggle('negative',mb<0);
-  document.getElementById('rb-ml').classList.toggle('positive',ml>=0);
-  document.getElementById('rb-ml').classList.toggle('negative',ml<0);
+  const ml = (venda-custo-venda*totalDesp)/venda;
+  const lucro = venda-custo-venda*totalDesp;
+  document.getElementById('calc-results').style.display='flex';
+  document.getElementById('rv-final').textContent = moeda(venda);
+  document.getElementById('rv-mb').textContent    = (mb*100).toFixed(1)+'%';
+  document.getElementById('rv-ml').textContent    = (ml*100).toFixed(1)+'%';
+  document.getElementById('rv-lucro').textContent = moeda(lucro);
+  document.getElementById('rb-mb').className='result-box '+(mb>=0?'positive':'negative');
+  document.getElementById('rb-ml').className='result-box '+(ml>=0?'positive':'negative');
 }
 </script>
 </body>
