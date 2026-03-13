@@ -3,7 +3,6 @@ const CUSTOS = {
   taxa_cartao: 0.026, frete: 0.05, total_variavel: 0.131,
   custo_fixo: 0.084, total_variavel_fixo: 0.215,
 };
-
 const PRODUTOS = [
   { fabricante: "LG", btus: 9000, ciclo: "F", cod: 2289, descricao: "Ar Cond. LG Dual Inverter Voice +IA S3NQ09AA31A (R-32) 09 Frio", estoque: 0, custo: 0, vista: 0, dez_x: 0, ml: 0, mb: 0, origem: "NACIONAL" },
   { fabricante: "LG", btus: 9000, ciclo: "QF", cod: 2290, descricao: "Ar Cond. LG Dual Inverter Voice +IA S3NW09AA31C (R-32) 09 Quente", estoque: 0, custo: 0, vista: 0, dez_x: 0, ml: 0, mb: 0, origem: "NACIONAL" },
@@ -83,6 +82,9 @@ const PRODUTOS = [
   { fabricante: "LG", btus: 47800, ciclo: "QF", cod: 2598, descricao: "Cond. Z5UW48GFB1 - MULTI - Q/F - LG", estoque: 62, custo: 10850.7101, vista: 14733.5531, dez_x: 15189.23, ml: -0.045369, mb: 0.285631, origem: "NACIONAL" },
   { fabricante: "LG", btus: 21000, ciclo: "F", cod: 2587, descricao: "Cond. Z2UQ21GFB1 - R32 - MULTI - Frio - LG", estoque: 28, custo: 3458.1014, vista: 4694.664119, dez_x: 4839.859917, ml: -0.045504, mb: 0.285496, origem: "NACIONAL" },
   { fabricante: "LG", btus: 24000, ciclo: "F", cod: 2588, descricao: "Cond. Z3UQ24GFB1 - R32 - MULTI - Frio - LG", estoque: 13, custo: 4637.3793, vista: 6295.633265, dez_x: 6490.343572, ml: -0.045504, mb: 0.285496, origem: "NACIONAL" },
- { fabricante: "Gree", btus: 22000, ciclo: "QF", cod: 7299, descricao: "Evap. K71v GKH(22)DA-D6DNA1A/I + Painel - Gree", estoque: 58, custo: 2784.87, vista: 3977.321868, dez_x: 4100.331823, ml: -0.010182, mb: 0.320818, origem: "NACIONAL" },
-];
+  { fabricante: "LG", btus: 30000, ciclo: "F", cod: 2589, descricao: "Cond. Z4UQ30GFB1 - R32 - MULTI - Frio - LG", estoque: 20, custo: 6654.9845, vista: 9034.702379, dez_x: 9314.126164, ml: -0.045504, mb: 0.285496, origem: "NACIONAL" },
+  { fabricante: "LG", btus: 36000, ciclo: "F", cod: 2590, descricao: "Cond. Z4UQ36GFB1 - R32 - MULTI - Frio - LG", estoque: 14, custo: 7761.8637, vista: 10537.384187, dez_x: 10863.282667, ml: -0.045504, mb: 0.285496, origem: "NACIONAL" },
+  { fabricante: "LG", btus: 48000, ciclo: "F", cod: 2591, descricao: "Cond. Z5UQ48GFB1 - R32 - MULTI - Frio - LG", estoque: 22, custo: 9223.1041, vista: 12521.141192, dez_x: 12908.392981, ml: -0.045504, mb: 0.285496, origem: "NACIONAL" },
+  { fabricante: "LG", btus: 51000, ciclo: "F", cod: 2592, descricao: "Cond. Z5UQ54GFB1 - R32 - MULTI - Frio - LG", estoque: 36, custo: 10606.5692, vista: 14399.311671, dez_x: 14844.651207, ml: -0.045504, mb: 0.285496, origem: "NACIONAL" },
+  { fabricante: "LG", bt
 
