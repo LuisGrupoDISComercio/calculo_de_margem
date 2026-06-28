@@ -1,282 +1,1732 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dis. Comércio — Tabela de Margem</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador de Margens — Dis Comércio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --excel-bg:#ECECEC;--excel-row-alt:#F5F5F5;--excel-grid:#BFBFBF;
+  --excel-grid-thick:#808080;--excel-header-bg:#D9D9D9;--excel-text:#000;
+  --excel-blue:#1F497D;--excel-blue-bg:#DCE6F1;--excel-yellow:#FFFF99;
+  --excel-green:#C6EFCE;--excel-green-text:#006100;
+  --excel-red:#FFC7CE;--excel-red-text:#9C0006;
+  --excel-amber:#FFEB9C;--excel-amber-text:#9C5700;
+  --excel-selected:#FFF2CC;--excel-input-bg:#FFFFCC;
+  --font-mono:'Consolas','Lucida Console','Courier New',monospace;
+  --font-sans:'Segoe UI','Arial',sans-serif;
+}
+body{background:#F2F2F2;color:var(--excel-text);font-family:var(--font-sans);font-size:11px;min-height:100vh}
+
+#tela-login{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-card{background:#fff;border:1px solid #999;padding:24px;width:340px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.login-head{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--excel-grid)}
+.login-head h1{font-size:14px;color:var(--excel-blue);font-weight:700;margin-bottom:4px}
+.login-head p{font-size:11px;color:#666}
+.f-row{margin-bottom:10px}
+.f-row label{display:block;font-size:11px;font-weight:600;color:#333;margin-bottom:3px}
+.f-row input{width:100%;padding:6px 8px;border:1px solid #999;background:#fff;font-family:var(--font-sans);font-size:12px;color:var(--excel-text)}
+.f-row input:focus{outline:none;border-color:var(--excel-blue);background:var(--excel-input-bg)}
+.btn-entrar{width:100%;padding:8px;background:var(--excel-blue);color:#fff;border:1px solid #14365A;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px}
+.btn-entrar:hover{background:#14365A}
+.login-err{font-size:11px;color:var(--excel-red-text);background:var(--excel-red);padding:6px 8px;border:1px solid #C00;margin-top:8px;display:none}
+
+#tela-app{display:none}
+.topbar{height:36px;background:var(--excel-blue);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:12px}
+.tb-l{display:flex;align-items:center;gap:10px;font-weight:600}
+.tb-r{display:flex;align-items:center;gap:8px;font-size:11px}
+.tb-btn{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--font-sans)}
+.tb-btn:hover{background:rgba(255,255,255,.1)}
+
+.tabs{display:flex;background:var(--excel-header-bg);border-bottom:1px solid var(--excel-grid)}
+.tab{padding:7px 16px;font-size:11px;font-weight:600;color:#333;cursor:pointer;border-right:1px solid var(--excel-grid)}
+.tab.on{background:#fff;color:var(--excel-blue);border-bottom:2px solid var(--excel-blue);margin-bottom:-1px}
+.tab:hover:not(.on){background:#E0E0E0}
+.panel{display:none;padding:8px}
+.panel.on{display:block}
+
+.sheet-grid{display:grid;grid-template-columns:1fr 600px;gap:8px;max-width:1500px;margin:0 auto}
+
+.block{background:#fff;border:1px solid var(--excel-grid-thick);margin-bottom:8px}
+.block-title{background:var(--excel-header-bg);border-bottom:1px solid var(--excel-grid);padding:4px 8px;font-size:11px;font-weight:700}
+
+.items-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px}
+.items-table thead th{background:var(--excel-header-bg);color:var(--excel-text);font-weight:700;font-size:10px;padding:4px;border:1px solid var(--excel-grid);text-align:center}
+.items-table td{border:1px solid var(--excel-grid);padding:3px 5px;background:#fff;min-height:22px;vertical-align:middle}
+.items-table tr:nth-child(even) td{background:var(--excel-row-alt)}
+.items-table tr.empty td{color:#BBB;background:#FAFAFA}
+.items-table .col-ord{width:36px;text-align:center;color:#666}
+.items-table .col-sku{width:60px;text-align:center}
+.items-table .col-desc{font-family:var(--font-sans);font-size:11px;text-align:left}
+.items-table .col-qtd{width:46px;text-align:center}
+.items-table .col-num{width:90px;text-align:right}
+.items-table .col-ni{width:30px;text-align:center;font-weight:600}
+.items-table input{width:100%;border:none;background:transparent;font-family:var(--font-mono);font-size:11px;text-align:right;outline:none;padding:0}
+.items-table input:focus{background:var(--excel-input-bg)}
+.items-table input.qtd{text-align:center}
+.items-table .del-btn{border:none;background:transparent;cursor:pointer;color:#999;font-size:14px;line-height:1;padding:0 4px}
+.items-table .del-btn:hover{color:var(--excel-red-text)}
+.items-table tfoot td{background:var(--excel-header-bg);font-weight:700;border-top:2px solid var(--excel-grid-thick)}
+.ni-N{color:#006100}
+.ni-I{color:#9C5700}
+
+.search-block{background:#fff;border:1px solid var(--excel-grid-thick);margin-bottom:8px;padding:6px}
+.search-row{display:flex;gap:6px;align-items:center}
+.search-row label{font-size:11px;font-weight:600;color:#333}
+.search-row input,.search-row select{padding:4px 6px;border:1px solid #999;font-size:11px;font-family:var(--font-sans);background:#fff;color:var(--excel-text)}
+.search-row input{flex:1;min-width:180px}
+.search-row input:focus,.search-row select:focus{outline:none;border-color:var(--excel-blue);background:var(--excel-input-bg)}
+.search-results{margin-top:6px;max-height:200px;overflow-y:auto;border:1px solid var(--excel-grid);display:none}
+.search-results.on{display:block}
+.search-item{display:flex;gap:8px;padding:4px 6px;border-bottom:1px solid var(--excel-grid);cursor:pointer;font-size:11px;align-items:center}
+.search-item:hover{background:var(--excel-selected)}
+.search-item:last-child{border-bottom:none}
+.si-fab{display:inline-block;width:50px;font-weight:700;font-family:var(--font-mono);font-size:10px}
+.si-sku{font-family:var(--font-mono);font-size:10px;width:45px;color:#666}
+.si-desc{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si-price{font-family:var(--font-mono);font-size:11px;width:90px;text-align:right;font-weight:600}
+
+.panel-gestao{background:#fff;border:1px solid var(--excel-grid-thick)}
+.panel-gestao .ge-title{background:var(--excel-blue);color:#fff;padding:5px 10px;font-size:12px;font-weight:700;text-align:center}
+
+.params-table{width:100%;border-collapse:collapse;font-size:11px}
+.params-table td{border:1px solid var(--excel-grid);padding:4px 8px;vertical-align:middle}
+.params-table .p-lbl{background:var(--excel-header-bg);font-weight:600;width:130px}
+.params-table .p-val{background:#fff}
+.params-table select,.params-table input{width:100%;border:none;background:var(--excel-input-bg);padding:2px 4px;font-family:var(--font-sans);font-size:11px;color:var(--excel-text);outline:none}
+.params-table select:focus,.params-table input:focus{background:#FFE699}
+
+.ge-version{background:var(--excel-blue);color:#fff;padding:3px 8px;font-size:10px;font-family:var(--font-mono);text-align:right}
+
+.crc-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:1px solid var(--excel-grid)}
+.crc-cell{padding:4px 8px;border-right:1px solid var(--excel-grid);text-align:center;font-family:var(--font-mono);font-size:11px}
+.crc-cell:last-child{border-right:none}
+.crc-cell.lbl{background:var(--excel-header-bg);font-weight:700;font-family:var(--font-sans)}
+.crc-cell.val{background:#fff;font-weight:600}
+.crc-cell.yellow{background:var(--excel-yellow)}
+
+.totais-table{width:100%;border-collapse:collapse;font-size:11px}
+.totais-table th,.totais-table td{border:1px solid var(--excel-grid);padding:4px 8px;font-family:var(--font-mono);font-size:11px;vertical-align:middle}
+.totais-table th{background:var(--excel-header-bg);font-family:var(--font-sans);font-weight:700}
+.totais-table .col-lbl{background:var(--excel-header-bg);font-family:var(--font-sans);font-weight:600;width:120px}
+.totais-table td.green-cell{background:var(--excel-green);color:var(--excel-green-text);font-weight:700}
+.totais-table td.right{text-align:right}
+.totais-table td.center{text-align:center}
+.totais-table input,.totais-table select{width:100%;border:none;background:var(--excel-input-bg);font-family:var(--font-mono);font-size:11px;text-align:right;padding:2px 4px;outline:none}
+.totais-table input:focus,.totais-table select:focus{background:#FFE699}
+
+.mg-table{width:100%;border-collapse:collapse;font-size:11px}
+.mg-table th,.mg-table td{border:1px solid var(--excel-grid);padding:3px 8px;font-family:var(--font-mono);vertical-align:middle}
+.mg-table th{background:var(--excel-header-bg);font-family:var(--font-sans);font-weight:700;font-size:10px;text-align:center}
+.mg-table .row-lbl{background:var(--excel-header-bg);font-family:var(--font-sans);font-weight:600;width:160px}
+.mg-table td.num{text-align:right}
+.mg-table td.green{background:var(--excel-green);color:var(--excel-green-text);font-weight:700}
+.mg-table td.red{background:var(--excel-red);color:var(--excel-red-text);font-weight:700}
+.mg-table td.amber{background:var(--excel-amber);color:var(--excel-amber-text);font-weight:700}
+.mg-table tr.selected td{background:var(--excel-selected)}
+.mg-table tr.selected td.row-lbl{background:#FFE699;color:var(--excel-blue);font-weight:700}
+
+.bottom-grid{display:grid;grid-template-columns:2fr 1fr 1.2fr;gap:8px;margin-top:8px}
+.pgto-table,.split-table,.melhor-table{width:100%;border-collapse:collapse;font-size:11px}
+.pgto-table th,.pgto-table td,.split-table th,.split-table td,.melhor-table th,.melhor-table td{
+  border:1px solid var(--excel-grid);padding:3px 6px;font-family:var(--font-mono);vertical-align:middle
+}
+.pgto-table th,.split-table th,.melhor-table th{background:var(--excel-header-bg);font-family:var(--font-sans);font-weight:700;font-size:10px;text-align:center}
+.pgto-table td.center,.split-table td.center,.melhor-table td.center{text-align:center}
+.pgto-table td.right,.melhor-table td.right{text-align:right}
+.split-table td.fab{background:var(--excel-header-bg);font-family:var(--font-sans);font-weight:600;text-align:center;width:60px}
+.split-table td.fator-red{background:var(--excel-red);color:var(--excel-red-text);font-weight:700;text-align:center}
+.split-table td.fator-green{background:var(--excel-green);color:var(--excel-green-text);font-weight:700;text-align:center}
+.split-table td.fator-amber{background:var(--excel-amber);color:var(--excel-amber-text);font-weight:700;text-align:center}
+.melhor-table td.green-cell{background:var(--excel-green);color:var(--excel-green-text);font-weight:700;font-size:14px;text-align:right;padding:6px}
+.melhor-table .row-tab{background:var(--excel-header-bg);font-weight:600}
+
+.mg-atual-warn{margin-top:8px;padding:6px 8px;background:var(--excel-yellow);border:1px solid #B8860B;font-size:11px;text-align:center;font-weight:600}
+.mg-atual-warn .mg-pct{font-size:14px;font-weight:700}
+
+.admin-nav{display:flex;gap:0;margin-bottom:10px;border-bottom:1px solid var(--excel-grid)}
+.a-nav-btn{padding:6px 14px;background:var(--excel-header-bg);border:1px solid var(--excel-grid);border-right:none;font-size:11px;cursor:pointer;color:#333}
+.a-nav-btn:last-child{border-right:1px solid var(--excel-grid)}
+.a-nav-btn.on{background:#fff;border-bottom:1px solid #fff;color:var(--excel-blue);font-weight:700}
+.a-sec{display:none}
+.a-sec.on{display:block}
+.a-card{background:#fff;border:1px solid var(--excel-grid-thick);margin-bottom:10px}
+.a-hdr{background:var(--excel-header-bg);padding:6px 10px;border-bottom:1px solid var(--excel-grid);display:flex;justify-content:space-between;align-items:center}
+.a-hdr-title{font-size:12px;font-weight:700}
+.a-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.a-tbl th{background:var(--excel-header-bg);padding:5px 8px;border:1px solid var(--excel-grid);text-align:left;font-size:10px;font-weight:700}
+.a-tbl td{padding:4px 8px;border:1px solid var(--excel-grid);font-family:var(--font-mono)}
+.a-tbl tr:nth-child(even) td{background:var(--excel-row-alt)}
+.a-input{padding:3px 5px;border:1px solid #999;font-family:var(--font-mono);font-size:11px;width:70px;text-align:right;background:var(--excel-input-bg)}
+.a-input:focus{outline:none;border-color:var(--excel-blue)}
+.btn-save{padding:5px 14px;background:var(--excel-blue);color:#fff;border:1px solid #14365A;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-sans)}
+.btn-save:hover{background:#14365A}
+.btn-liberar-codigo{padding:4px 10px;background:#006100;color:#fff;border:1px solid #004A00;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--font-sans);white-space:nowrap}
+.btn-liberar-codigo:hover{background:#004A00}
+.btn-liberar-codigo:disabled{opacity:0.6;cursor:not-allowed}
+.tog{width:30px;height:16px;background:#999;border-radius:8px;cursor:pointer;position:relative;border:none}
+.tog.on{background:#006100}
+.tog::after{content:'';position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s}
+.tog.on::after{transform:translateX(14px)}
+
+.toast{position:fixed;bottom:16px;right:16px;background:#000;color:#fff;padding:8px 14px;font-size:11px;display:none;z-index:9999;max-width:300px}
+
+/* ── Notificações de aprovação pendente ── */
+.notif-bell{position:relative;background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;padding:3px 10px;font-size:14px;cursor:pointer;font-family:var(--font-sans);line-height:1}
+.notif-bell:hover{background:rgba(255,255,255,.1)}
+.notif-badge{position:absolute;top:-5px;right:-5px;background:#E74C3C;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.notif-popup{display:none;position:fixed;top:44px;right:12px;width:360px;background:#fff;border:1px solid var(--excel-grid-thick);box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:3000;font-size:11px}
+.notif-popup.on{display:block}
+.notif-popup-hdr{background:var(--excel-blue);color:#fff;padding:6px 10px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.notif-popup-hdr-right{display:flex;align-items:center;gap:8px}
+.notif-toggle-label{font-size:10px;font-weight:400;opacity:.85;cursor:pointer;display:flex;align-items:center;gap:4px}
+.notif-toggle{width:28px;height:14px;appearance:none;background:rgba(255,255,255,.3);border-radius:7px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.notif-toggle:checked{background:#27AE60}
+.notif-toggle::after{content:'';position:absolute;width:10px;height:10px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s}
+.notif-toggle:checked::after{left:16px}
+.notif-list{max-height:320px;overflow-y:auto}
+.notif-item{padding:8px 10px;border-bottom:1px solid var(--excel-grid);cursor:pointer;display:flex;align-items:flex-start;gap:8px}
+.notif-item:hover{background:var(--excel-row-alt)}
+.notif-item.notif-new{background:#FFF9E6;border-left:3px solid var(--excel-amber)}
+.notif-item-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-weight:700;color:#1F497D;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-item-sub{color:#555;margin-top:2px;line-height:1.4}
+.notif-item-time{color:#999;font-size:9px;margin-top:3px}
+.notif-empty{padding:20px;text-align:center;color:#999}
+.notif-footer{padding:6px 10px;border-top:1px solid var(--excel-grid);text-align:right}
+.notif-footer button{background:none;border:none;color:var(--excel-blue);font-size:10px;cursor:pointer;text-decoration:underline;font-family:var(--font-sans)}
+/* Pop-up toast de nova simulação */
+.notif-toast{display:none;position:fixed;bottom:52px;right:16px;width:300px;background:#fff;border:1px solid var(--excel-grid-thick);border-left:4px solid var(--excel-amber);box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:3000;padding:10px 12px;font-size:11px;animation:notif-slide-in .3s ease}
+.notif-toast.on{display:block}
+@keyframes notif-slide-in{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.notif-toast-title{font-weight:700;color:var(--excel-amber-text);margin-bottom:4px}
+.notif-toast-body{color:#333;line-height:1.5}
+.notif-toast-btns{display:flex;gap:6px;margin-top:8px}
+.notif-toast-btns button{flex:1;padding:4px;font-size:10px;cursor:pointer;font-family:var(--font-sans)}
+.notif-toast-ver{background:var(--excel-blue);color:#fff;border:none}
+.notif-toast-ok{background:#fff;color:#555;border:1px solid var(--excel-grid)}
+.toast.on{display:block}
+.toast.ok{background:var(--excel-green-text)}
+.toast.err{background:var(--excel-red-text)}
+
+.hist-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.hist-tbl th{background:var(--excel-header-bg);padding:5px 8px;border:1px solid var(--excel-grid);text-align:left;font-size:10px;font-weight:700}
+.hist-tbl td{padding:4px 8px;border:1px solid var(--excel-grid)}
+.hist-tbl tr:nth-child(even) td{background:var(--excel-row-alt)}
+
+@media(max-width:1200px){.sheet-grid{grid-template-columns:1fr}.bottom-grid{grid-template-columns:1fr}}
+/* ── Cadastro de Produtos ── */
+.up-zone{border:2px dashed var(--excel-grid);padding:20px;text-align:center;cursor:pointer;background:var(--excel-row-alt);transition:background .2s}
+.up-zone:hover,.up-zone.drag{background:#EEF3FB;border-color:var(--excel-blue)}
+.up-zone input[type=file]{display:none}
+.up-zone-lbl{font-size:12px;color:#555;line-height:1.8}
+.up-zone-lbl strong{color:var(--excel-blue)}
+.up-preview{margin-top:10px}
+.up-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.up-badge{padding:4px 10px;font-size:11px;font-weight:700;border-radius:2px}
+.up-badge.ins{background:#C6EFCE;color:#006100}
+.up-badge.upd{background:#DCE6F1;color:#1F497D}
+.up-badge.des{background:#FFC7CE;color:#9C0006}
+.up-badge.unc{background:var(--excel-row-alt);color:#555;border:1px solid var(--excel-grid)}
+.up-badge.err{background:#FFC7CE;color:#9C0006}
+.up-diff-tbl{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px}
+.up-diff-tbl th{background:var(--excel-header-bg);padding:4px 8px;border:1px solid var(--excel-grid);font-size:10px;font-weight:700}
+.up-diff-tbl td{padding:3px 8px;border:1px solid var(--excel-grid);font-family:var(--font-mono)}
+.up-diff-tbl tr.ins td{background:#EBF5EB}
+.up-diff-tbl tr.upd td{background:#EEF3FB}
+.up-diff-tbl tr.des td{background:#FFF0F0}
+.up-actions{display:flex;gap:8px;align-items:center;margin-top:6px}
+.btn-cancel{padding:5px 14px;background:#fff;color:#333;border:1px solid #999;font-size:11px;cursor:pointer}
+.btn-cancel:hover{background:#f0f0f0}
+.up-err-box{background:#FFC7CE;color:#9C0006;padding:8px 10px;font-size:11px;margin-top:8px;border:1px solid #9C0006}
+.up-hist-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.up-hist-tbl th{background:var(--excel-header-bg);padding:5px 8px;border:1px solid var(--excel-grid);text-align:left;font-size:10px;font-weight:700}
+.up-hist-tbl td{padding:4px 8px;border:1px solid var(--excel-grid);font-family:var(--font-mono)}
+.up-hist-tbl tr:nth-child(even) td{background:var(--excel-row-alt)}
+.btn-dl{padding:3px 10px;background:var(--excel-blue);color:#fff;border:none;font-size:10px;cursor:pointer}
+.btn-dl:hover{background:#14365A}
+/* ── Bloco C: Aprovação ── */
+.consultor-obrig{border:2px solid #9C0006 !important;background:#FFF0F0 !important}
+.consultor-obrig::placeholder{color:#9C0006}
+/* Status badges */
+.st-rascunho{background:#E8E8E8;color:#555;padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:default}
+.st-aguardando{background:var(--excel-amber);color:var(--excel-amber-text);padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:pointer}
+.st-encaminhado{background:#1F497D;color:#fff;padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:pointer}
+.st-revisao{background:#FF8C00;color:#fff;padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:pointer}
+.st-aprovado{background:var(--excel-green);color:var(--excel-green-text);padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:pointer}
+.st-aprov-auto{background:#E2EFDA;color:#375623;padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:pointer}
+.st-cancelado{background:var(--excel-red);color:var(--excel-red-text);padding:2px 8px;font-size:10px;font-weight:700;border-radius:2px;cursor:pointer}
+/* Modal de solicitação */
+.modal-sol{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+.modal-sol.on{display:flex}
+.modal-sol-box{background:#fff;border:2px solid var(--excel-blue);width:520px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal-sol-hdr{background:var(--excel-blue);color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+.modal-sol-hdr span{font-size:12px;font-weight:700}
+.modal-sol-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+.modal-sol-info{background:var(--excel-row-alt);border:1px solid var(--excel-grid);padding:8px 10px;font-size:11px;line-height:1.8}
+.modal-sol-info strong{color:var(--excel-blue)}
+.modal-sol label{font-size:11px;font-weight:700;display:block;margin-bottom:3px}
+.modal-sol textarea{width:100%;padding:6px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans);resize:vertical;min-height:70px}
+.modal-sol textarea:focus{outline:none;border-color:var(--excel-blue)}
+.modal-sol-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:4px}
+/* Chat de aprovação */
+.chat-wrap{border:1px solid var(--excel-grid);margin-top:8px;max-height:300px;overflow-y:auto}
+.chat-msg{padding:8px 10px;border-bottom:1px solid var(--excel-grid);font-size:11px}
+.chat-msg:last-child{border-bottom:none}
+.chat-msg.vendedor{background:#fff}
+.chat-msg.gestor{background:#EEF3FB}
+.chat-msg.diretor{background:#EBF5EB}
+.chat-msg .chat-meta{font-size:10px;color:#888;margin-bottom:3px}
+.chat-msg .chat-tipo{font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;margin-left:4px}
+.chat-msg .chat-tipo.justificativa{background:#FFE699;color:#7B6100}
+.chat-msg .chat-tipo.aprovacao{background:var(--excel-green);color:var(--excel-green-text)}
+.chat-msg .chat-tipo.rejeicao{background:var(--excel-red);color:var(--excel-red-text)}
+.chat-msg .chat-tipo.encaminhamento{background:#DCE6F1;color:#1F497D}
+.chat-msg .chat-tipo.comentario{background:#E8E8E8;color:#555}
+.chat-msg .chat-tipo.ficha{background:#DCE6F1;color:#1F497D}
+.chat-msg .chat-tipo.revisao{background:#FFE0CC;color:#7B3000}
+.ficha-table{width:100%;border-collapse:collapse;margin-top:4px;font-size:11px}
+.ficha-table td{padding:2px 5px;border:1px solid #D0D0D0;vertical-align:top}
+.ficha-table .ficha-lbl{background:var(--excel-header-bg);font-weight:600;width:45%;color:#333}
+.ficha-table .ficha-val{background:#fff}
+.ficha-alterado{color:#C55000;font-weight:700}
+.ficha-ant{color:#888;text-decoration:line-through;margin-right:4px;font-size:10px}
+.num-seq{font-size:10px;font-family:var(--font-mono);color:var(--excel-blue);font-weight:700;background:var(--excel-blue-bg);padding:2px 6px;border-radius:2px}
+/* Modal aprovador full-screen */
+.modal-aprov{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000;align-items:stretch;justify-content:stretch}
+.modal-aprov.on{display:flex}
+.modal-aprov-full{display:flex;flex-direction:column;width:100%;height:100%;background:#F2F2F2}
+.modal-aprov-hdr{background:var(--excel-blue);color:#fff;padding:0 12px;height:36px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-aprov-hdr-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px}
+.modal-aprov-body{display:grid;grid-template-columns:1fr 420px;flex:1;overflow:hidden;gap:0}
+.modal-aprov-left{overflow-y:auto;padding:8px;background:#F2F2F2;border-right:2px solid var(--excel-grid-thick)}
+.modal-aprov-right{display:flex;flex-direction:column;background:#fff;overflow:hidden}
+.modal-aprov-right-hdr{background:var(--excel-header-bg);border-bottom:1px solid var(--excel-grid);padding:6px 10px;font-size:11px;font-weight:700;flex-shrink:0}
+.modal-aprov-chat-wrap{flex:1;overflow-y:auto;padding:8px}
+.modal-aprov-acoes{border-top:2px solid var(--excel-grid-thick);padding:10px;flex-shrink:0;background:#fff}
+/* Snapshot somente leitura */
+.snap-readonly{pointer-events:none;opacity:1}
+.snap-readonly input,.snap-readonly select,.snap-readonly textarea{background:var(--excel-row-alt)!important;color:#333!important;cursor:default!important}
+.snap-info-bar{background:var(--excel-blue);color:#fff;padding:5px 10px;font-size:11px;font-weight:600;margin-bottom:8px;display:flex;gap:16px;flex-wrap:wrap}
+.snap-info-bar span{opacity:.9}
+.snap-info-bar strong{opacity:1}
+/* Modal de detalhes */
+/* Modal simular aprovado */
+
+/* Modal genérico */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.on{display:flex}
+/* Badges de alçada */
+.badge-vendedor{background:#DCE6F1;color:#1F497D;padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.badge-supervisor{background:#E2EFDA;color:#375623;padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.badge-gestor{background:var(--excel-amber);color:var(--excel-amber-text);padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.badge-diretor{background:#C6EFCE;color:#006100;padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.badge-analista{background:#E8D5F0;color:#5B1A8A;padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.badge-admin{background:#1F497D;color:#fff;padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.badge-administrativo{background:#D9D2E9;color:#4C1F6F;padding:2px 7px;font-size:10px;font-weight:700;border-radius:2px}
+.chat-msg.supervisor{background:#F0EEF8}
+.chat-msg.analista{background:#F3E8FC}
+.cq-campo{background:#fafafa;border:1px solid #ddd;border-radius:4px;padding:8px 10px}
+.cq-lbl{font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase}
+.cq-val{font-size:13px;color:#222}
+</style>
 </head>
 <body>
-<header>
-  <h1>Dis. Comércio — Tabela de Margem</h1>
-  <span id="info-data">Carregando…</span>
-</header>
-<div class="custos-panel">
-  <h2>Estrutura de Custos (Cálculo de Margem)</h2>
-  <div class="custo-item"><label>Custo Variável:</label><span id="cv">—</span></div>
-  <div class="custo-item"><label>Partilha:</label><span id="pt">—</span></div>
-  <div class="custo-item"><label>Comissão Parc.:</label><span id="cp">—</span></div>
-  <div class="custo-item"><label>Taxa Cartão:</label><span id="tc">—</span></div>
-  <div class="custo-item"><label>Frete:</label><span id="fr">—</span></div>
-  <div class="custo-item"><label>Total Variável:</label><span id="tv">—</span></div>
-  <div class="custo-item"><label>Custo Fixo:</label><span id="cf">—</span></div>
-  <div class="custo-item"><label>Total Var. + Fixo:</label><span id="tvf">—</span></div>
-</div>
-<div class="calc-panel">
-  <h2>Calculadora de Margem</h2>
-  <div class="calc-grid">
-    <div class="field"><label>Preço de Custo (R$)</label><input type="number" id="calc-custo" placeholder="Ex: 2000" step="0.01" min="0" /></div>
-    <div class="field"><label>Preço de Venda (R$)</label><input type="number" id="calc-venda" placeholder="Ex: 3000" step="0.01" min="0" /></div>
-    <div class="field"><label>Forma de pagamento</label>
-      <select id="calc-forma">
-        <option value="vista">À Vista</option>
-        <option value="dez_x">10x (parcelado)</option>
-      </select>
+
+<div id="tela-login">
+  <div class="login-card">
+    <div class="login-head">
+      <h1>SIMULADOR DE MARGENS</h1>
+      <p>Dis Comércio — Gestão Estratégica</p>
     </div>
-    <div class="field"><label>Desconto (%)</label><input type="number" id="calc-desc" placeholder="Ex: 5" step="0.1" min="0" max="100" /></div>
-    <div class="field" style="align-self:flex-end">
-      <button onclick="calcularMargem()" style="background:#1a3a5c;color:#fff;border:none;border-radius:4px;padding:7px 18px;cursor:pointer;font-size:13px;font-weight:700;">Calcular</button>
+    <div class="f-row"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@email.com.br"></div>
+    <div class="f-row"><label>Senha</label><input type="password" id="l-senha"></div>
+    <button class="btn-entrar" onclick="fazerLogin()">ENTRAR</button>
+    <div style="text-align:center;margin-top:8px">
+      <button onclick="abrirEsqueciSenha()" style="background:none;border:none;color:var(--excel-blue);font-size:11px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+    </div>
+    <div class="login-err" id="l-err"></div>
+  </div>
+</div>
+
+<div id="tela-app">
+
+  <div class="topbar">
+    <div class="tb-l"><span>SIMULADOR DE MARGENS</span></div>
+    <div class="tb-r">
+      <span id="tb-user"></span>
+      <span id="tb-date" style="font-family:var(--font-mono)"></span>
+      <button class="tb-btn" id="tb-admin" onclick="mudarTab('admin')" style="display:none">Admin</button>
+      <!-- Sino de notificações — visível apenas para aprovadores -->
+      <button class="notif-bell" id="notif-bell" onclick="toggleNotifPopup()" title="Simulações pendentes de aprovação" style="display:none">
+        🔔
+        <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+      </button>
+      <button class="tb-btn" onclick="abrirModalSenha()" title="Alterar minha senha">🔑 Senha</button>
+      <button class="tb-btn" onclick="sair()">Sair</button>
     </div>
   </div>
-  <div class="calc-results" id="calc-results" style="display:none">
-    <div class="result-box" id="rb-vista"><div class="r-label">Preço Final</div><div class="r-value" id="rv-final">—</div></div>
-    <div class="result-box" id="rb-mb"><div class="r-label">Margem Bruta</div><div class="r-value" id="rv-mb">—</div></div>
-    <div class="result-box" id="rb-ml"><div class="r-label">Margem Líquida</div><div class="r-value" id="rv-ml">—</div></div>
-    <div class="result-box" id="rb-lucro"><div class="r-label">Lucro Líquido (R$)</div><div class="r-value" id="rv-lucro">—</div></div>
+
+  <div class="tabs">
+    <div class="tab on" id="t-sim" onclick="mudarTab('sim')">Gestão Estratégica</div>
+    <div class="tab" id="t-hist" onclick="mudarTab('hist')">Minhas Simulações</div>
+    <div class="tab" id="t-consulta" onclick="mudarTab('consulta')">Consulta de Simulações</div>
+    <div class="tab" id="t-admin" onclick="mudarTab('admin')" style="display:none">Administração</div>
+  </div>
+
+  <div class="panel on" id="p-sim">
+
+    <div class="search-block">
+      <div class="search-row">
+        <label>Pesquisar produto:</label>
+        <input id="s-busca" type="text" placeholder="Descrição, SKU ou BTUs..." oninput="filtrar()" onfocus="filtrar()" onkeydown="buscaKeydown(event)">
+        <select id="s-fab" onchange="filtrar()">
+          <option value="">Todos fabricantes</option>
+          <option>LG</option><option>Midea</option><option>Carrier</option>
+          <option>Daikin</option><option>Gree</option><option>TCL</option>
+          <option>Trane</option><option>Agratto</option>
+        </select>
+        <select id="s-grp" onchange="filtrar()">
+          <option value="">Todos grupos</option>
+          <option>INV</option><option>MSP</option><option>FIX</option><option>CRT</option>
+        </select>
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+
+    <div class="sheet-grid">
+
+      <div>
+        <div class="block">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="col-ord">Ordem</th>
+                <th class="col-sku">SKU</th>
+                <th class="col-desc">Descrição</th>
+                <th class="col-qtd">Qtd</th>
+                <th class="col-num">Preço tabela</th>
+                <th class="col-num">Preço final</th>
+                <th class="col-ni">N/I</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" style="text-align:right">TOTAL</td>
+                <td class="col-num" id="t-tabela">—</td>
+                <td class="col-num" id="t-final">—</td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="bottom-grid">
+          <div class="block" id="bloco-promocoes">
+            <div class="block-title">Promoções da Semana</div>
+            <div style="display:flex;align-items:center;justify-content:center;height:calc(100% - 24px);min-height:80px;background:#F5F5F5;border:2px dashed #BDBDBD;border-radius:2px;color:#9E9E9E;font-size:11px;font-family:var(--font-sans);text-align:center;padding:12px">
+              Em construção
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-title">Simultaniedade Multi-split</div>
+            <table class="split-table">
+              <tbody>
+                <tr><td class="fab">LG</td><td id="sim-lg" class="center">—</td></tr>
+                <tr><td class="fab">Daikin</td><td id="sim-dk" class="center">—</td></tr>
+                <tr><td class="fab">Gree</td><td id="sim-gr" class="center">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="block">
+            <table class="melhor-table">
+              <tbody>
+                <tr><td class="row-tab">Preço Tabela</td><td class="right" id="mp-tab">R$ —</td></tr>
+                <tr><td class="row-tab">Desconto</td><td class="right" id="mp-desc">—</td></tr>
+                <tr><td class="row-tab" style="font-weight:700">Melhor Preço</td><td class="green-cell" id="mp-melhor">R$ —</td></tr>
+                <tr><td colspan="2" style="text-align:center" id="mp-parcela">À vista</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="block" style="margin-top:8px">
+          <div class="block-title">Formas de pagamento</div>
+          <table class="pgto-table">
+            <thead><tr><th>Método</th><th>Parcela</th><th>Total</th><th>Método</th><th>Parcela</th><th>Total</th></tr></thead>
+            <tbody id="pgto-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel-gestao">
+        <div class="ge-title">Painel de Gestão Estratégica</div>
+
+        <div class="crc-row" id="g-custo-row-lbl">
+          <div class="crc-cell lbl">Custo</div>
+          <div class="crc-cell lbl">Rebate</div>
+          <div class="crc-cell lbl">Consultor</div>
+          <div class="crc-cell lbl">Parceiro</div>
+        </div>
+        <div class="crc-row" id="g-custo-row-val">
+          <div class="crc-cell val" id="g-custo">R$ —</div>
+          <div class="crc-cell val" style="padding:0">
+            <input type="number" id="g-rebate-input" placeholder="0,00" step="0.01" min="0" oninput="calcular()"
+              title="Rebate — editável apenas por Analista e Diretoria"
+              style="width:100%;border:none;background:var(--excel-input-bg);text-align:center;font-family:var(--font-mono);font-size:11px;padding:4px 8px;outline:none">
+          </div>
+          <div class="crc-cell yellow" style="padding:0;background:var(--excel-yellow)">
+            <input type="text" id="g-consultor-input" placeholder="Nome do consultor" maxlength="60"
+              title="Nome do vendedor responsável por esta simulação"
+              style="width:100%;border:none;background:transparent;text-align:center;font-family:var(--font-sans);font-size:11px;font-weight:600;padding:4px 8px;outline:none">
+          </div>
+          <div class="crc-cell val" style="padding:0">
+            <input type="text" id="g-parceiro-input" placeholder="Nome do parceiro" maxlength="80"
+              title="Nome do parceiro instalador indicado pelo vendedor (opcional)"
+              style="width:100%;border:none;background:var(--excel-input-bg);text-align:center;font-family:var(--font-sans);font-size:11px;padding:4px 8px;outline:none">
+          </div>
+        </div>
+
+        <div class="ge-version" id="g-version">Tabela Maio/2026 v6</div>
+
+        <table class="params-table">
+          <tbody>
+            <tr><td class="p-lbl">Estado Cliente</td><td class="p-val">
+              <select id="p-estado" onchange="onEstadoChange()">
+                <option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option>
+                <option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option>
+                <option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option>
+                <option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option>
+                <option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option>
+                <option value="MG">Minas Gerais (MG)</option><option value="MS">Mato Grosso do Sul (MS)</option>
+                <option value="MT">Mato Grosso (MT)</option><option value="PA">Pará (PA)</option>
+                <option value="PB">Paraíba (PB)</option><option value="PE">Pernambuco (PE)</option>
+                <option value="PI">Piauí (PI)</option><option value="PR">Paraná (PR)</option>
+                <option value="RJ">Rio de Janeiro (RJ)</option><option value="RN">Rio Grande do Norte (RN)</option>
+                <option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option>
+                <option value="RS">Rio Grande do Sul (RS)</option><option value="SC">Santa Catarina (SC)</option>
+                <option value="SE">Sergipe (SE)</option>
+                <option value="SP" selected>São Paulo (SP)</option>
+                <option value="TO">Tocantins (TO)</option>
+              </select>
+            </td></tr>
+            <tr><td class="p-lbl">Contribuinte ICMS</td><td class="p-val">
+              <select id="p-contrib" onchange="calcular()">
+                <option value="0">Não Contribuinte</option>
+                <option value="1">Contribuinte</option>
+              </select>
+            </td></tr>
+            <tr><td class="p-lbl">Frete para</td><td class="p-val">
+              <select id="p-frete" onchange="onFreteChange()">
+                <option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option>
+                <option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option>
+                <option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option>
+                <option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option>
+                <option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option>
+                <option value="MG">Minas Gerais (MG)</option><option value="MS">Mato Grosso do Sul (MS)</option>
+                <option value="MT">Mato Grosso (MT)</option><option value="PA">Pará (PA)</option>
+                <option value="PB">Paraíba (PB)</option><option value="PE">Pernambuco (PE)</option>
+                <option value="PI">Piauí (PI)</option><option value="PR">Paraná (PR)</option>
+                <option value="RJ">Rio de Janeiro (RJ)</option><option value="RN">Rio Grande do Norte (RN)</option>
+                <option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option>
+                <option value="RS">Rio Grande do Sul (RS)</option><option value="SC">Santa Catarina (SC)</option>
+                <option value="SE">Sergipe (SE)</option>
+                <option value="SP" selected>São Paulo (SP)</option>
+                <option value="TO">Tocantins (TO)</option>
+              </select>
+            </td></tr>
+            <tr><td class="p-lbl">Área rural</td><td class="p-val">
+              <select id="p-rural" onchange="calcular()">
+                <option value="0">Não</option>
+                <option value="350">Sim (+R$ 350)</option>
+              </select>
+            </td></tr>
+            <tr><td class="p-lbl">Origem</td><td class="p-val">
+              <select id="p-origem" onchange="calcular()">
+                <option value="UNIS">UNIS</option>
+                <option value="Bonshop">Bonshop</option>
+                <option value="Representante">Representante</option>
+              </select>
+            </td></tr>
+            <tr><td class="p-lbl">RT</td><td class="p-val" style="padding:0">
+              <div style="display:flex;align-items:center;gap:4px">
+                <input type="number" id="p-rt" value="5.00" step="0.01" min="0" max="10" oninput="calcular()" style="text-align:right;flex:1;background:var(--excel-input-bg);border:none;padding:2px 4px;font-family:var(--font-sans);font-size:11px;outline:none" title="Recompensa por Transação — limite máx 10%">
+                <span style="font-size:10px;color:#666">%</span>
+                <span id="p-rt-rs" style="font-family:var(--font-mono);font-size:10px;color:var(--excel-blue);padding:0 8px 0 4px;min-width:90px;text-align:right;font-weight:600">R$ —</span>
+              </div>
+            </td>
+            </td></tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top:8px">
+        <table class="totais-table">
+          <thead><tr><th></th><th>Preço total</th><th>Desconto</th><th>Margem Líquida</th></tr></thead>
+          <tbody>
+            <tr><td class="col-lbl">Tabela 8x</td><td class="right" id="tt-8x">—</td><td class="center">—</td><td></td></tr>
+            <tr><td class="col-lbl">Tabela à vista</td><td class="right" id="tt-av">—</td><td class="center" id="tt-av-desc">—</td><td></td></tr>
+            <tr><td class="col-lbl">Negociação</td>
+              <td class="right"><input type="number" id="tt-neg" step="0.01" min="0" oninput="onNegChange()" onfocus="_negFocused=true" onblur="_negFocused=false;onNegBlur()" placeholder="Digite o valor"></td>
+              <td class="center" id="tt-neg-desc">—</td><td></td></tr>
+            <tr><td class="col-lbl">Parcelas</td>
+              <td colspan="3" class="green-cell" style="text-align:center">
+                <select id="tt-parc" onchange="calcular()" style="background:transparent;color:var(--excel-green-text);font-weight:700;text-align:center">
+                  <option value="pix">À vista</option>
+                  <option value="cartao_1x">Cartão - 1x</option>
+                  <option value="cartao_2_6">Cartão - 2x</option>
+                  <option value="cartao_2_6b">Cartão - 3x</option>
+                  <option value="cartao_2_6c">Cartão - 4x</option>
+                  <option value="cartao_2_6d">Cartão - 5x</option>
+                  <option value="cartao_2_6e">Cartão - 6x</option>
+                  <option value="cartao_7_8">Cartão - 7x</option>
+                  <option value="cartao_7_8b">Cartão - 8x</option>
+                  <option value="cartao_9_10">Cartão - 9x</option>
+                  <option value="cartao_10x">Cartão - 10x</option>
+                  <option value="boleto_av">Boleto - à vista</option>
+                  <option value="boleto_2_6">Boleto - 2x a 6x</option>
+                  <option value="boleto_7_10">Boleto - 7x a 10x</option>
+                </select>
+              </td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <div style="margin-top:8px">
+        <table class="mg-table" id="mg-table">
+          <thead><tr><th></th><th style="width:80px">MG Bruta</th><th style="width:80px">Desconto %</th><th style="width:80px">MG Líquida</th><th style="width:90px">Dívida R$</th><th style="width:110px">Equilíbrio</th></tr></thead>
+          <tbody id="mg-body"></tbody>
+        </table>
+        </div>
+
+        <div class="mg-atual-warn" id="mg-warn">
+          Margem líquida (<span id="mg-forma-lbl">à vista</span>): <span class="mg-pct" id="mg-atual">—</span>
+        </div>
+
+        <div style="padding:8px;border-top:1px solid var(--excel-grid);background:var(--excel-header-bg);display:flex;gap:6px">
+          <button id="btn-cancelar-reenvio" class="btn-save" style="background:#9C0006;border-color:#660000;display:none" onclick="cancelarReenvio()">✕ Cancelar Edição</button>
+          <button class="btn-save" style="flex:1" id="btn-salvar" onclick="salvarSim()">Salvar Simulação</button>
+          <button class="tb-btn" style="color:#000;border-color:#999" onclick="window.print()">Imprimir</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="panel" id="p-hist">
+    <div class="a-card">
+      <div class="a-hdr"><span class="a-hdr-title">Simulações salvas</span><button class="btn-save" onclick="carregarHist()">Atualizar</button></div>
+      <div id="hist-filtros" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 4px;align-items:center">
+        <input id="f-busca" type="text" placeholder="Buscar #, consultor, produto, e-mail..." oninput="debounceHist()"
+          style="flex:1;min-width:200px;max-width:320px;padding:5px 10px;font-size:11px;border:1px solid var(--excel-grid);font-family:var(--font-sans)">
+        <select id="f-status" onchange="filtrarHist()" style="padding:5px 8px;font-size:11px;border:1px solid var(--excel-grid);font-family:var(--font-sans)">
+          <option value="">Todos os status</option>
+          <option value="rascunho">Rascunho</option>
+          <option value="aguardando_aprovacao">Aguardando Aprovação</option>
+          <option value="encaminhado">Encaminhado</option>
+          <option value="aguardando_revisao_vendedor">Aguardando Revisão</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+        <select id="f-encaminhado" onchange="filtrarHist()" style="padding:5px 8px;font-size:11px;border:1px solid var(--excel-grid);font-family:var(--font-sans)">
+          <option value="">Todos encaminhamentos</option>
+          <option value="para_mim">Encaminhados para mim</option>
+          <option value="com_enc">Com encaminhamento</option>
+        </select>
+        <select id="f-estado" onchange="filtrarHist()" style="padding:5px 8px;font-size:11px;border:1px solid var(--excel-grid);font-family:var(--font-sans)">
+          <option value="">Todos os estados</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="date" id="f-data-ini" onchange="carregarHist()" title="Data inicial"
+            style="padding:4px 6px;font-size:11px;border:1px solid var(--excel-grid);font-family:var(--font-sans);cursor:pointer">
+          <span style="font-size:11px;color:#666">e</span>
+          <input type="date" id="f-data-fim" onchange="carregarHist()" title="Data final"
+            style="padding:4px 6px;font-size:11px;border:1px solid var(--excel-grid);font-family:var(--font-sans);cursor:pointer">
+          <button onclick="limparFiltros()" title="Limpar todos os filtros"
+            style="padding:4px 8px;font-size:12px;background:#C0392B;color:#fff;border:none;cursor:pointer;font-family:var(--font-sans);font-weight:700;line-height:1">✕</button>
+        </div>
+        <span id="f-count" style="font-size:10px;color:#999;margin-left:4px"></span>
+      </div>
+      <table class="hist-tbl">
+        <thead><tr><th>#</th><th>Data</th><th>Consultor</th><th>Parceiro</th><th>Marca</th><th>Produto</th><th>Estado</th><th>Pagamento</th><th>Preço</th><th>Rebate</th><th>MG Líquida</th><th>RT</th><th>Status</th><th>Encaminhado para</th><th>Data encaminhamento</th><th>Liberar Código</th></tr></thead>
+        <tbody id="hist-body"><tr><td colspan="6" style="text-align:center;padding:20px;color:#666">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" id="p-consulta">
+    <div class="block" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:12px;color:#555">Nº da simulação</label>
+        <input id="cq-num" type="number" placeholder="Ex: 123" style="width:120px" onkeydown="if(event.key==='Enter')buscarConsulta()">
+        <button class="btn-save" onclick="buscarConsulta()">Buscar</button>
+        <span id="cq-num-badge" class="num-seq" style="display:none"></span>
+        <span id="cq-msg" style="font-size:12px;color:#a00;margin-left:8px"></span>
+      </div>
+    </div>
+    <div id="cq-resultado" class="block" style="padding:16px;display:none">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+        <div class="cq-campo"><div class="cq-lbl">Data da aprovação</div><div class="cq-val" id="cq-data">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Status</div><div class="cq-val" id="cq-status">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Aprovado por</div><div class="cq-val" id="cq-aprovador" style="font-size:11px">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Consultor</div><div class="cq-val" id="cq-consultor" style="font-size:11px">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Unidade de negócio</div><div class="cq-val" id="cq-unidade">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Valor</div><div class="cq-val" id="cq-valor">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Forma de pagamento</div><div class="cq-val" id="cq-pagamento">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">Contribuinte?</div><div class="cq-val" id="cq-contribuinte">—</div></div>
+        <div class="cq-campo"><div class="cq-lbl">RT</div><div class="cq-val" id="cq-rt">—</div></div>
+        <div class="cq-campo" style="grid-column:span 2">
+          <div class="cq-lbl">Número do pedido</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="cq-pedido" type="text" placeholder="Ex: 00123-2026" style="flex:1">
+            <button class="btn-save" style="padding:4px 10px" onclick="salvarNumeroPedido()">Salvar</button>
+          </div>
+          <div id="cq-pedido-meta" style="font-size:10px;color:#777;margin-top:3px"></div>
+        </div>
+        <div class="cq-campo"><div class="cq-lbl">Parceiro</div><div class="cq-val" id="cq-parceiro" style="font-size:11px">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="p-admin">
+    <div class="admin-nav">
+      <button class="a-nav-btn on" onclick="aTab('icms',this)">ICMS por estado</button>
+      <button class="a-nav-btn" onclick="aTab('taxas',this)">Taxas de pagamento</button>
+      <button class="a-nav-btn" onclick="aTab('custos',this)">Custos e margens</button>
+      <button class="a-nav-btn" onclick="aTab('origens',this)">Origens</button>
+      <button class="a-nav-btn" onclick="aTab('log',this)">Histórico</button>
+      <button class="a-nav-btn" onclick="aTab('produtos',this)">Cadastro de Produtos</button>
+      <button class="a-nav-btn" onclick="aTab('margem-fab',this)">Margem por Fabricante</button>
+      <button class="a-nav-btn" onclick="aTab('alcadas',this)">Alçadas de Aprovação</button>
+      <button class="a-nav-btn" onclick="aTab('usuarios2',this)">Usuários</button>
+      <button class="a-nav-btn" onclick="aTab('unidades',this)">Unidades de Negócio</button>
+    </div>
+    <div class="a-sec on" id="as-icms">
+      <div class="a-card"><div class="a-hdr"><span class="a-hdr-title">ICMS por estado</span><button class="btn-save" onclick="salvarICMS()">Salvar</button></div>
+        <table class="a-tbl"><thead><tr><th>Estado</th><th>UF</th><th>Nacional (%)</th><th>Importado (%)</th><th>Frete (%)</th></tr></thead>
+        <tbody id="icms-body"><tr><td colspan="5" style="text-align:center;padding:14px">Carregando...</td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="a-sec" id="as-taxas">
+      <div class="a-card"><div class="a-hdr"><span class="a-hdr-title">Taxas de pagamento</span><button class="btn-save" onclick="salvarTaxas()">Salvar</button></div>
+        <table class="a-tbl"><thead><tr><th>Modalidade</th><th>Parcelas</th><th>Taxa (%)</th><th>Ativo</th></tr></thead><tbody id="taxas-body"></tbody></table>
+      </div>
+    </div>
+    <div class="a-sec" id="as-custos">
+      <div class="a-card"><div class="a-hdr"><span class="a-hdr-title">Custos e margens</span><button class="btn-save" onclick="salvarCustos()">Salvar</button></div>
+        <table class="a-tbl"><thead><tr><th>Parâmetro</th><th>Descrição</th><th>Valor (%)</th></tr></thead><tbody id="custos-body"></tbody></table>
+      </div>
+    </div>
+    <div class="a-sec" id="as-origens">
+      <div class="a-card"><div class="a-hdr"><span class="a-hdr-title">Origens de pedido</span><button class="btn-save" onclick="salvarOrigens()">Salvar</button></div>
+        <table class="a-tbl"><thead><tr><th>Canal</th><th>Comissão (%)</th><th>Ativo</th></tr></thead><tbody id="origens-body"></tbody></table>
+      </div>
+    </div>
+    <div class="a-sec" id="as-log">
+      <div class="a-card"><div class="a-hdr"><span class="a-hdr-title">Histórico de alterações</span><button class="btn-save" onclick="carregarLog()">Atualizar</button></div>
+        <table class="hist-tbl"><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Seção</th><th>Alteração</th></tr></thead><tbody id="log-body"></tbody></table>
+      </div>
+    </div>
+    <div class="a-sec" id="as-margem-fab">
+      <div class="a-card">
+        <div class="a-hdr">
+          <span class="a-hdr-title">Margem Mínima por Fabricante</span>
+          <button class="btn-save" onclick="salvarMargemFab()">Salvar</button>
+        </div>
+        <p style="padding:8px 10px;font-size:11px;color:#555">
+          Define o piso de margem líquida por fabricante. O pedido usa o menor piso entre os fabricantes presentes.
+          Valores negativos são permitidos (ex: -5% = -0,05).
+        </p>
+        <table class="a-tbl">
+          <thead><tr><th>Fabricante</th><th style="width:140px">Margem mínima (%)</th><th style="width:80px">Ação</th></tr></thead>
+          <tbody id="margem-fab-body"><tr><td colspan="3" style="text-align:center;padding:14px">Carregando...</td></tr></tbody>
+        </table>
+        <div style="padding:8px 10px;border-top:1px solid var(--excel-grid)">
+          <button class="btn-save" onclick="adicionarLinhaMargemFab()" style="background:#006100;border-color:#004A00">+ Adicionar fabricante</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-sec" id="as-alcadas">
+      <div class="a-card">
+        <div class="a-hdr">
+          <span class="a-hdr-title">Alçadas de Aprovação</span>
+          <button class="btn-save" onclick="salvarAlcadas()">Salvar</button>
+        </div>
+        <p style="padding:8px 10px;font-size:11px;color:#555">
+          Define os intervalos de margem por nível. Margem <em>máxima</em> nula = sem limite superior.
+          Margem <em>mínima</em> nula = sem limite inferior (inclui negativos).
+        </p>
+        <table class="a-tbl">
+          <thead><tr>
+            <th>Nível</th>
+            <th style="width:160px">Margem mínima (%)</th>
+            <th style="width:160px">Margem máxima (%)</th>
+            <th style="width:200px">Comportamento</th>
+          </tr></thead>
+          <tbody id="alcadas-body"><tr><td colspan="4" style="text-align:center;padding:14px">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="a-sec" id="as-usuarios2">
+      <div class="a-card">
+        <div class="a-hdr">
+          <span class="a-hdr-title">Usuários e Alçadas</span>
+          <button class="btn-save" onclick="abrirModalNovoUsuario()">+ Novo Usuário</button>
+          <button class="btn-save" onclick="carregarUsuarios()" style="background:#555;border-color:#333;margin-left:4px">Atualizar</button>
+        </div>
+        <table class="a-tbl">
+          <thead><tr>
+            <th>E-mail</th>
+            <th style="width:120px">Alçada</th>
+            <th style="width:200px">Vínculos de aprovação</th>
+            <th style="width:80px;text-align:center">Admin</th>
+            <th style="width:90px;text-align:center">Telegram</th>
+            <th style="width:130px">Ações</th>
+          </tr></thead>
+          <tbody id="usuarios-body"><tr><td colspan="6" style="text-align:center;padding:14px">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Modal novo usuário -->
+      <div id="modal-novo-usuario" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:#fff;border:2px solid var(--excel-blue);padding:0;width:380px;max-width:95vw">
+          <div class="a-hdr"><span class="a-hdr-title">Novo Usuário</span><button onclick="fecharModalNovoUsuario()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#666">✕</button></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">E-mail *</label>
+              <input type="email" id="nu-email" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Senha *</label>
+              <input type="password" id="nu-senha" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Nome do Consultor</label>
+              <input type="text" id="nu-consultor" placeholder="Nome que aparece no simulador" maxlength="60" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Alçada</label>
+              <select id="nu-alcada" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="vendedor">Vendedor</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="gestor">Gestor</option>
+                <option value="analista">Analista</option>
+                <option value="diretor">Diretor</option>
+                <option value="administrativo">Administrativo</option>
+              </select></div>
+            <div id="nu-supervisor-row"><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Supervisor Aprovador</label>
+              <select id="nu-supervisor" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="">— Nenhum —</option>
+              </select></div>
+            <div id="nu-gestor-row"><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Gestor Aprovador</label>
+              <select id="nu-gestor" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="">— Nenhum —</option>
+              </select></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Unidade de Negócio</label>
+              <select id="nu-unidade" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="">— Nenhuma —</option>
+              </select></div>
+            <div id="nu-administrativo-row" style="display:none;border-top:1px solid var(--excel-grid);padding-top:8px">
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px">Abas liberadas</label>
+              <div id="nu-abas-box" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;margin-bottom:10px"></div>
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px">Unidades de negócio liberadas</label>
+              <div id="nu-unidades-box" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--excel-grid);border-bottom:1px solid var(--excel-grid)">
+              <input type="checkbox" id="nu-is-admin" style="width:14px;height:14px;cursor:pointer">
+              <label for="nu-is-admin" style="font-size:11px;font-weight:700;cursor:pointer;margin:0">
+                Perfil Admin <span style="font-weight:400;color:#555">(acesso ao painel de administração)</span>
+              </label>
+            </div>
+            <div id="nu-err" style="color:#9C0006;font-size:11px;display:none"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn-cancel" onclick="fecharModalNovoUsuario()">Cancelar</button>
+              <button class="btn-save" onclick="criarUsuario()">Criar Usuário</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Editar Usuário -->
+      <div id="modal-editar-usuario" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:#fff;border:2px solid var(--excel-blue);padding:0;width:380px;max-width:95vw">
+          <div class="a-hdr"><span class="a-hdr-title">Editar Usuário</span><button onclick="fecharModalEditarUsuario()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#666">✕</button></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:11px;color:#555;background:var(--excel-row-alt);padding:6px 8px;border:1px solid var(--excel-grid)">
+              <strong id="eu-email-label"></strong>
+            </div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Nome do Consultor</label>
+              <input type="text" id="eu-consultor" placeholder="Nome que aparece no simulador" maxlength="60" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Alçada</label>
+              <select id="eu-alcada" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="vendedor">Vendedor</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="gestor">Gestor</option>
+                <option value="analista">Analista</option>
+                <option value="diretor">Diretor</option>
+                <option value="administrativo">Administrativo</option>
+              </select></div>
+            <div id="eu-supervisor-row"><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Supervisor Aprovador</label>
+              <select id="eu-supervisor" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="">— Nenhum —</option>
+              </select></div>
+            <div id="eu-gestor-row"><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Gestor Aprovador</label>
+              <select id="eu-gestor" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="">— Nenhum —</option>
+              </select></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Unidade de Negócio</label>
+              <select id="eu-unidade" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px">
+                <option value="">— Nenhuma —</option>
+              </select></div>
+            <div id="eu-administrativo-row" style="display:none;border-top:1px solid var(--excel-grid);padding-top:8px">
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px">Abas liberadas</label>
+              <div id="eu-abas-box" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;margin-bottom:10px"></div>
+              <label style="font-size:11px;font-weight:700;display:block;margin-bottom:5px">Unidades de negócio liberadas</label>
+              <div id="eu-unidades-box" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--excel-grid);border-bottom:1px solid var(--excel-grid)">
+              <input type="checkbox" id="eu-is-admin" style="width:14px;height:14px;cursor:pointer">
+              <label for="eu-is-admin" style="font-size:11px;font-weight:700;cursor:pointer;margin:0">
+                Perfil Admin <span style="font-weight:400;color:#555">(acesso ao painel de administração)</span>
+              </label>
+            </div>
+            <div id="eu-err" style="color:#9C0006;font-size:11px;display:none"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn-cancel" onclick="fecharModalEditarUsuario()">Cancelar</button>
+              <button class="btn-save" onclick="salvarEdicaoUsuario()">Salvar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-sec" id="as-unidades">
+      <div class="a-card">
+        <div class="a-hdr">
+          <span class="a-hdr-title">Unidades de Negócio</span>
+          <button class="btn-save" onclick="abrirModalNovaUN()">+ Nova Unidade</button>
+          <button class="btn-save" onclick="carregarUnidades()" style="background:#555;border-color:#333;margin-left:4px">Atualizar</button>
+        </div>
+        <table class="a-tbl">
+          <thead><tr>
+            <th>Nome</th>
+            <th>Descrição</th>
+            <th style="width:80px;text-align:center">Status</th>
+            <th style="width:120px">Ações</th>
+          </tr></thead>
+          <tbody id="unidades-body"><tr><td colspan="4" style="text-align:center;padding:14px">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Modal Nova/Editar Unidade -->
+      <div id="modal-un" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:#fff;border:2px solid var(--excel-blue);padding:0;width:360px;max-width:95vw">
+          <div class="a-hdr"><span class="a-hdr-title" id="modal-un-title">Nova Unidade</span><button onclick="fecharModalUN()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#666">✕</button></div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <input type="hidden" id="un-id">
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Nome *</label>
+              <input type="text" id="un-nome" maxlength="80" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Descrição</label>
+              <input type="text" id="un-desc" maxlength="160" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"></div>
+            <div id="un-err" style="color:#9C0006;font-size:11px;display:none"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn-cancel" onclick="fecharModalUN()">Cancelar</button>
+              <button class="btn-save" onclick="salvarUN()">Salvar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-sec" id="as-produtos">
+      <!-- Card 1: Upload -->
+      <div class="a-card">
+        <div class="a-hdr">
+          <span class="a-hdr-title">Atualizar Catálogo de Produtos</span>
+        </div>
+        <div style="padding:12px">
+          <p style="font-size:11px;color:#555;margin-bottom:10px">
+            Selecione o arquivo Excel (aba <strong>Banco de Dados</strong>) para atualizar o catálogo.
+            Novos produtos serão inseridos, existentes atualizados e produtos ausentes serão desativados.
+          </p>
+          <div class="up-zone" id="up-zone" onclick="$('up-file').click()"
+               ondragover="event.preventDefault();this.classList.add('drag')"
+               ondragleave="this.classList.remove('drag')"
+               ondrop="onUpDrop(event)">
+            <input type="file" id="up-file" accept=".xlsx,.xlsm" onchange="onUpSelect(event)">
+            <div class="up-zone-lbl">
+              <strong>Clique para selecionar</strong> ou arraste o arquivo aqui<br>
+              Formatos aceitos: .xlsx / .xlsm
+            </div>
+          </div>
+          <div id="up-feedback"></div>
+        </div>
+      </div>
+      <!-- Card 2: Histórico de uploads -->
+      <div class="a-card">
+        <div class="a-hdr">
+          <span class="a-hdr-title">Histórico de Uploads</span>
+          <button class="btn-save" onclick="carregarHistUploads()">Atualizar</button>
+        </div>
+        <table class="up-hist-tbl">
+          <thead><tr>
+            <th>Data/Hora</th><th>Usuário</th><th>Arquivo</th>
+            <th style="text-align:center">+Novos</th>
+            <th style="text-align:center">~Atualizados</th>
+            <th style="text-align:center">−Desativados</th>
+            <th style="text-align:center">Inalterados</th>
+            <th style="text-align:center">Status</th>
+            <th style="text-align:center">Arquivo</th>
+          </tr></thead>
+          <tbody id="up-hist-body">
+            <tr><td colspan="9" style="text-align:center;padding:14px;color:#666">Nenhum upload realizado ainda.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: Esqueci minha senha (usuário — tela de login) -->
+<div class="modal-sol" id="modal-esqueci">
+  <div class="modal-sol-box" style="width:380px">
+    <div class="modal-sol-hdr">
+      <span>Esqueci minha senha</span>
+      <button onclick="fecharEsqueciSenha()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px">✕</button>
+    </div>
+    <div class="modal-sol-body">
+      <div style="text-align:center;padding:10px 0 6px">
+        <div style="font-size:32px;margin-bottom:10px">🔑</div>
+        <div style="font-size:12px;font-weight:700;color:#1F497D;margin-bottom:8px">Redefinição de senha</div>
+        <div style="font-size:11px;color:#555;line-height:1.8;text-align:left;background:var(--excel-row-alt);border:1px solid var(--excel-grid);padding:10px 12px">
+          Para redefinir sua senha, entre em contato com o administrador do sistema.<br><br>
+          O administrador irá gerar uma senha temporária e enviar para você.<br><br>
+          Após receber, acesse o sistema e troque sua senha usando o botão
+          <strong>🔑 Senha</strong> no canto superior direito da tela.
+        </div>
+      </div>
+      <div class="modal-sol-actions" style="justify-content:center;margin-top:4px">
+        <button class="btn-save" onclick="fecharEsqueciSenha()">Entendido</button>
+      </div>
+    </div>
   </div>
 </div>
-<div class="filters">
-  <div class="field"><label>Buscar</label><input type="text" id="f-busca" placeholder="Código, descrição…" oninput="aplicarFiltros()" /></div>
-  <div class="field"><label>Fabricante</label><select id="f-fab" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
-  <div class="field"><label>BTUs</label><select id="f-btu" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
-  <div class="field"><label>Ciclo</label>
-    <select id="f-ciclo" onchange="aplicarFiltros()">
-      <option value="">Todos</option>
-      <option value="F">Frio (F)</option>
-      <option value="QF">Quente/Frio (QF)</option>
-    </select>
+
+<!-- Modal: Vincular Telegram -->
+<div class="modal-sol" id="modal-tg-vincular">
+  <div class="modal-sol-box" style="width:440px">
+    <div class="modal-sol-hdr" style="background:#0088cc">
+      <span>Vincular Telegram</span>
+      <button onclick="fecharVincularTelegram()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px">✕</button>
+    </div>
+    <div class="modal-sol-body">
+      <div class="modal-sol-info" id="tg-vincular-info"></div>
+
+      <div id="tg-passo1">
+        <p style="font-size:11px;color:#555;line-height:1.8">
+          <strong>Passo 1:</strong> O usuário deve abrir o Telegram e buscar
+          <strong>@DIS_Simulator_Bot</strong><br>
+          <strong>Passo 2:</strong> Enviar o comando <code style="background:#f0f0f0;padding:1px 5px">/start</code><br>
+          <strong>Passo 3:</strong> O bot vai responder com um código de 6 dígitos<br>
+          <strong>Passo 4:</strong> O usuário informa o código abaixo
+        </p>
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-top:4px">
+          <div style="flex:1">
+            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">
+              Código informado pelo usuário <span style="color:#9C0006">*</span>
+            </label>
+            <input type="text" id="tg-codigo" maxlength="6"
+              style="width:100%;padding:6px 8px;border:1px solid #999;font-size:14px;font-family:var(--font-mono);letter-spacing:4px;text-align:center"
+              placeholder="000000">
+          </div>
+        </div>
+        <p style="font-size:10px;color:#888;margin-top:4px;line-height:1.6">
+          Para obter o Chat ID: o bot responde ao <code>/start</code> com o ID.
+          Ou use <a href="https://t.me/userinfobot" target="_blank" style="color:#0088cc">@userinfobot</a> no Telegram.
+        </p>
+        <div id="tg-err" style="color:#9C0006;font-size:11px;display:none;margin-top:4px"></div>
+        <div id="tg-ok" style="color:#006100;font-size:11px;background:#C6EFCE;padding:6px 8px;display:none;margin-top:4px"></div>
+        <div class="modal-sol-actions">
+          <button class="btn-cancel" onclick="fecharVincularTelegram()">Cancelar</button>
+          <button class="btn-save" style="background:#0088cc;border-color:#006699" onclick="confirmarVincularTelegram()">Vincular</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="field"><label>Origem</label>
-    <select id="f-origem" onchange="aplicarFiltros()">
-      <option value="">Todas</option>
-      <option value="NACIONAL">Nacional</option>
-      <option value="IMPORTADO">Importado</option>
-    </select>
+</div>
+
+<!-- Modal: Reset de Senha pelo Admin -->
+<div class="modal-sol" id="modal-reset-senha">
+  <div class="modal-sol-box" style="width:380px">
+    <div class="modal-sol-hdr" style="background:#9C5700">
+      <span id="modal-reset-titulo">Redefinir Senha</span>
+      <button onclick="fecharModalResetSenha()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px">✕</button>
+    </div>
+    <div class="modal-sol-body">
+      <div class="modal-sol-info" id="modal-reset-info"></div>
+      <p style="font-size:11px;color:#555">
+        Defina uma senha temporária e comunique ao usuário por WhatsApp.
+        Ele deverá trocá-la após o login usando o botão 🔑 Senha.
+      </p>
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">
+          Nova senha temporária <span style="color:#9C0006">*</span>
+        </label>
+        <input type="text" id="reset-nova-senha"
+          style="width:100%;padding:6px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-mono);letter-spacing:1px"
+          placeholder="Mínimo 6 caracteres">
+        <button onclick="gerarSenhaAleatoria()"
+          style="margin-top:4px;padding:3px 10px;background:#555;color:#fff;border:none;font-size:10px;cursor:pointer">
+          🎲 Gerar senha aleatória
+        </button>
+      </div>
+      <div id="reset-err" style="color:#9C0006;font-size:11px;display:none"></div>
+      <div id="reset-ok" style="color:#006100;font-size:11px;background:#C6EFCE;padding:6px 8px;display:none"></div>
+      <div class="modal-sol-actions">
+        <button class="btn-cancel" onclick="fecharModalResetSenha()">Cancelar</button>
+        <button class="btn-save" id="btn-confirmar-reset"
+          style="background:#9C5700;border-color:#7B4400"
+          onclick="confirmarResetSenha()">Redefinir senha</button>
+      </div>
+    </div>
   </div>
-  <div class="field"><label>Apenas com estoque</label>
-    <select id="f-estoque" onchange="aplicarFiltros()">
-      <option value="">Todos</option>
-      <option value="1">Com estoque</option>
-      <option value="0">Sem estoque</option>
-    </select>
+</div>
+
+<!-- Modal: Troca de Senha -->
+<div class="modal-sol" id="modal-senha">
+  <div class="modal-sol-box" style="width:380px">
+    <div class="modal-sol-hdr">
+      <span>Alterar Senha</span>
+      <button onclick="fecharModalSenha()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px">✕</button>
+    </div>
+    <div class="modal-sol-body">
+      <p style="font-size:11px;color:#555">
+        Digite sua senha atual e escolha uma nova senha com no mínimo 6 caracteres.
+      </p>
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">
+          Senha atual <span style="color:#9C0006">*</span>
+        </label>
+        <input type="password" id="senha-atual"
+          style="width:100%;padding:6px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"
+          placeholder="Senha atual">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">
+          Nova senha <span style="color:#9C0006">*</span>
+        </label>
+        <input type="password" id="senha-nova"
+          style="width:100%;padding:6px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"
+          placeholder="Mínimo 6 caracteres">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">
+          Confirmar nova senha <span style="color:#9C0006">*</span>
+        </label>
+        <input type="password" id="senha-confirm"
+          style="width:100%;padding:6px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans)"
+          placeholder="Repita a nova senha">
+      </div>
+      <div id="senha-err" style="color:#9C0006;font-size:11px;display:none"></div>
+      <div id="senha-ok" style="color:#006100;font-size:11px;background:#C6EFCE;padding:6px 8px;display:none">
+        ✅ Senha alterada com sucesso!
+      </div>
+      <div class="modal-sol-actions">
+        <button class="btn-cancel" onclick="fecharModalSenha()">Cancelar</button>
+        <button class="btn-save" id="btn-salvar-senha" onclick="trocarSenha()">Salvar nova senha</button>
+      </div>
+    </div>
   </div>
-  <button class="btn-limpar" onclick="limparFiltros()">Limpar</button>
-  <button class="btn-exportar" onclick="exportarCSV()">Exportar CSV</button>
 </div>
-<div class="stats-bar">
-  <div class="stat-card"><div class="s-label">Total de Itens</div><div class="s-value" id="stat-total">—</div></div>
-  <div class="stat-card"><div class="s-label">Itens com Estoque</div><div class="s-value" id="stat-estoque">—</div></div>
-  <div class="stat-card"><div class="s-label">MB Média</div><div class="s-value" id="stat-mb">—</div></div>
-  <div class="stat-card"><div class="s-label">Fabricantes</div><div class="s-value" id="stat-fab">—</div></div>
-  <div class="stat-card"><div class="s-label">Nacionais / Importados</div><div class="s-value" id="stat-orig">—</div></div>
+
+<!-- Modal: Solicitação de Aprovação (vendedor) -->
+<div class="modal-sol" id="modal-sol">
+  <div class="modal-sol-box">
+    <div class="modal-sol-hdr">
+      <span id="modal-sol-titulo">Solicitação de Aprovação de Margem</span>
+      <button onclick="fecharModalSol()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px">✕</button>
+    </div>
+    <div class="modal-sol-body">
+      <div class="modal-sol-info" id="modal-sol-info"></div>
+      <div>
+        <label>Justificativa <span style="color:#9C0006">*</span></label>
+        <textarea id="sol-justificativa" placeholder="Explique o motivo da negociação fora da margem mínima..." rows="3"></textarea>
+      </div>
+      <div>
+        <label>Comentário adicional (opcional)</label>
+        <textarea id="sol-comentario" placeholder="Informações complementares, estratégia comercial, histórico do cliente..." rows="2"></textarea>
+      </div>
+      <div>
+        <label>Anexo (opcional — orçamento concorrente, proposta, etc.)</label>
+        <input type="file" id="sol-anexo" accept=".pdf,.jpg,.jpeg,.png"
+          style="font-size:11px;padding:4px 0">
+        <div style="font-size:10px;color:#888;margin-top:2px">Formatos: PDF, JPG, PNG</div>
+      </div>
+      <div id="sol-err" style="color:#9C0006;font-size:11px;display:none"></div>
+      <div class="modal-sol-actions">
+        <button class="btn-cancel" onclick="fecharModalSol()">Cancelar</button>
+        <button class="btn-save" onclick="enviarSolicitacao()">Enviar solicitação</button>
+      </div>
+    </div>
+  </div>
 </div>
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th onclick="ordenar('fabricante')">Fabricante <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('btus')">BTUs <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('ciclo')">Ciclo <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('cod')">Cód. <span class="sort-icon">⇅</span></th>
-        <th>Descrição</th>
-        <th onclick="ordenar('estoque')">Estoque <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('custo')">Custo (R$) <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('vista')">À Vista (R$) <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('dez_x')">10x (R$) <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('ml')">ML% <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('mb')">MB% <span class="sort-icon">⇅</span></th>
-        <th onclick="ordenar('origem')">Origem <span class="sort-icon">⇅</span></th>
-      </tr>
-    </thead>
-    <tbody id="tabela-body"></tbody>
-  </table>
+
+<!-- Modal: Detalhes / Aprovação full-screen (gestor e diretor) -->
+<div class="modal-aprov" id="modal-aprov">
+  <div class="modal-aprov-full">
+
+    <!-- Header -->
+    <div class="modal-aprov-hdr">
+      <div class="modal-aprov-hdr-title">
+        <span>📋</span>
+        <span id="modal-aprov-titulo">Detalhes da Solicitação</span>
+      </div>
+      <button onclick="fecharModalAprov()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:18px;line-height:1;padding:0 4px" title="Fechar">✕</button>
+    </div>
+
+    <!-- Body: dois painéis -->
+    <div class="modal-aprov-body">
+
+      <!-- PAINEL ESQUERDO: snapshot do simulador -->
+      <div class="modal-aprov-left" id="modal-aprov-snapshot">
+        <div style="text-align:center;padding:40px;color:#999;font-size:12px">Carregando simulação...</div>
+      </div>
+
+      <!-- PAINEL DIREITO: info + chat + ações -->
+      <div class="modal-aprov-right">
+
+        <div class="modal-aprov-right-hdr">💬 Histórico da Solicitação</div>
+
+        <!-- Info resumida -->
+        <div style="padding:8px 10px;background:var(--excel-row-alt);border-bottom:1px solid var(--excel-grid);font-size:11px;line-height:1.8" id="modal-aprov-info"></div>
+
+        <!-- Chat -->
+        <div class="modal-aprov-chat-wrap">
+          <div id="modal-aprov-chat"></div>
+        </div>
+
+        <!-- Ações -->
+        <div class="modal-aprov-acoes" id="modal-aprov-acoes">
+          <div>
+            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Comentário</label>
+            <textarea id="aprov-comentario" placeholder="Seu comentário..." rows="3"
+              style="width:100%;padding:6px 8px;border:1px solid #999;font-size:11px;font-family:var(--font-sans);resize:vertical"></textarea>
+          </div>
+          <div id="aprov-encaminhar-row" style="display:none;margin-top:6px">
+            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:3px">Encaminhar para</label>
+            <select id="aprov-encaminhar-dest" style="width:100%;padding:5px 8px;border:1px solid #999;font-size:11px"></select>
+            <button class="btn-save" style="margin-top:6px;width:100%;background:#1F497D;border-color:#14365A" onclick="encaminharAprovacao()">✉️ Confirmar encaminhamento</button>
+          </div>
+          <div id="aprov-err" style="color:#9C0006;font-size:11px;display:none;margin-top:4px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+            <button class="btn-cancel" onclick="fecharModalAprov()">Fechar</button>
+            <button id="btn-reenviar"  class="btn-save" style="background:#9C5700;border-color:#7B4400;display:none" onclick="editarEReenviar()">✏️ Editar e Reenviar</button>
+            <button id="btn-encaminhar" class="btn-save" style="background:#1F497D;border-color:#14365A;display:none" onclick="mostrarEncaminhar()">Encaminhar ▼</button>
+            <button id="btn-rejeitar"  class="btn-save" style="background:#9C0006;border-color:#660000" onclick="rejeitarAprovacao()">Rejeitar</button>
+            <button id="btn-aprovar"   class="btn-save" style="background:#006100;border-color:#004A00" onclick="aprovarAprovacao()">Aprovar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 </div>
-<div class="paginacao" id="paginacao"></div>
-<script src="data.js"></script>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal: bloqueio de alçada -->
+<div class="modal-overlay" id="modal-alcada-block" style="z-index:3000">
+  <div style="background:#fff;border:2px solid #9C0006;width:420px;max-width:94vw;border-radius:2px;overflow:hidden">
+    <div style="background:#9C0006;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;font-weight:700">⛔ Aprovação Bloqueada</span>
+      <button onclick="$('modal-alcada-block').classList.remove('on')" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1">✕</button>
+    </div>
+    <div style="padding:24px 20px;text-align:center">
+      <div style="font-size:22px;margin-bottom:12px">🔒</div>
+      <div style="font-size:13px;font-weight:700;color:#9C0006;margin-bottom:8px">Aprovação fora da Alçada</div>
+      <div style="font-size:12px;color:#333;line-height:1.6">Solicite alteração de Diretoria</div>
+    </div>
+    <div style="padding:0 20px 16px;text-align:center">
+      <button onclick="$('modal-alcada-block').classList.remove('on')"
+        style="background:#9C0006;border:none;color:#fff;padding:7px 28px;font-size:12px;font-weight:700;cursor:pointer;border-radius:2px">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const POR_PAGINA = 50;
-let dadosFiltrados = [];
-let paginaAtual = 1;
-let ordemCol = '';
-let ordemAsc = true;
+const SB_URL='https://taqilydmutzbjhtohuet.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcWlseWRtdXR6YmpodG9odWV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MDU5NDAsImV4cCI6MjA5NTI4MTk0MH0.N2Pg_miINjlXvRmDCegZ2PxStUAl-04DsMJcgv9fxNo';
+const {createClient}=supabase;
+const sb=createClient(SB_URL,SB_KEY);
 
-function pct(v){ return (v*100).toFixed(1)+'%'; }
-function moeda(v){ return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+// ALTERADO (correção de segurança — admin.js v2): /api/admin agora exige
+// o token de sessão do usuário logado para confirmar quem está chamando.
+// Toda chamada a /api/admin deve usar este header em vez de um headers
+// fixo só com Content-Type.
+async function _authHeader(){
+  const {data} = await sb.auth.getSession();
+  const token = (data && data.session && data.session.access_token) || '';
+  return {'Content-Type':'application/json','Authorization':'Bearer '+token};
+}
 
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('cv').textContent  = pct(CUSTOS.custo_variavel);
-  document.getElementById('pt').textContent  = CUSTOS.partilha;
-  document.getElementById('cp').textContent  = pct(CUSTOS.comissao_parc);
-  document.getElementById('tc').textContent  = pct(CUSTOS.taxa_cartao);
-  document.getElementById('fr').textContent  = pct(CUSTOS.frete);
-  document.getElementById('tv').textContent  = pct(CUSTOS.total_variavel);
-  document.getElementById('cf').textContent  = pct(CUSTOS.custo_fixo);
-  document.getElementById('tvf').textContent = pct(CUSTOS.total_variavel_fixo);
-  document.getElementById('info-data').textContent = new Date().toLocaleDateString('pt-BR');
+let PRODUTOS = [];
 
-  const fabs = [...new Set(PRODUTOS.map(p=>p.fabricante))].sort();
-  const selFab = document.getElementById('f-fab');
-  fabs.forEach(f=>{ const o=document.createElement('option'); o.value=f; o.textContent=f; selFab.appendChild(o); });
+let CF=0.073;
+let CV_FIXO=0.044;
 
-  const btus = [...new Set(PRODUTOS.map(p=>p.btus))].sort((a,b)=>a-b);
-  const selBtu = document.getElementById('f-btu');
-  btus.forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=b; selBtu.appendChild(o); });
+const ICMS={
+  AC:{nat:0.07,imp:0.15,frt:0.05},AL:{nat:0.085,imp:0.165,frt:0.05},
+  AP:{nat:0.08,imp:0.16,frt:0.05},AM:{nat:0.06,imp:0.14,frt:0.05},
+  BA:{nat:0.085,imp:0.165,frt:0.05},CE:{nat:0.08,imp:0.16,frt:0.05},
+  DF:{nat:0.08,imp:0.16,frt:0.05},ES:{nat:0,imp:0,frt:0.05},
+  GO:{nat:0.07,imp:0.15,frt:0.05},MA:{nat:0.11,imp:0.19,frt:0.05},
+  MG:{nat:0.06,imp:0.14,frt:0.05},MS:{nat:0.05,imp:0.13,frt:0.05},
+  MT:{nat:0.05,imp:0.13,frt:0.05},PA:{nat:0.07,imp:0.15,frt:0.05},
+  PB:{nat:0.08,imp:0.16,frt:0.05},PE:{nat:0.085,imp:0.165,frt:0.05},
+  PI:{nat:0.105,imp:0.185,frt:0.05},PR:{nat:0.075,imp:0.155,frt:0.05},
+  RJ:{nat:0.10,imp:0.185,frt:0.05},RN:{nat:0.08,imp:0.16,frt:0.05},
+  RO:{nat:0.075,imp:0.155,frt:0.05},RR:{nat:0.08,imp:0.16,frt:0.05},
+  RS:{nat:0.05,imp:0.13,frt:0.05},SC:{nat:0.05,imp:0.13,frt:0.05},
+  SE:{nat:0.07,imp:0.15,frt:0.05},SP:{nat:0.06,imp:0.14,frt:0.035},
+  TO:{nat:0.08,imp:0.16,frt:0.05}
+};
 
-  aplicarFiltros();
-});
+const TAXAS={
+  pix:0, boleto_av:0,
+  cartao_1x:0.021,
+  cartao_2_6:0.0267, cartao_2_6b:0.0267, cartao_2_6c:0.0267,
+  cartao_2_6d:0.0267, cartao_2_6e:0.0267,
+  cartao_7_8:0.0291, cartao_7_8b:0.0291,
+  cartao_9_10:0.052, cartao_10x:0.052,
+  boleto_2_6:0.012, boleto_7_10:0.020
+};
 
-function aplicarFiltros(){
-  const busca  = document.getElementById('f-busca').value.toLowerCase();
-  const fab    = document.getElementById('f-fab').value;
-  const btu    = document.getElementById('f-btu').value;
-  const ciclo  = document.getElementById('f-ciclo').value;
-  const origem = document.getElementById('f-origem').value;
-  const est    = document.getElementById('f-estoque').value;
+const ORIGENS={UNIS:0, Bonshop:0, Representante:0.028};
 
-  dadosFiltrados = PRODUTOS.filter(p=>{
-    if(fab && p.fabricante !== fab) return false;
-    if(btu && p.btus !== parseInt(btu)) return false;
-    if(ciclo && p.ciclo.toUpperCase() !== ciclo) return false;
-    if(origem && p.origem !== origem) return false;
-    if(est==='1' && p.estoque<=0) return false;
-    if(est==='0' && p.estoque>0) return false;
-    if(busca){ const txt=(p.cod+' '+p.descricao).toLowerCase(); if(!txt.includes(busca)) return false; }
-    return true;
+let icmsDB=ICMS, taxasDB={...TAXAS}, origensDB={...ORIGENS};
+
+// Carrega do banco todos os parâmetros usados nos cálculos (taxas, custos, origens, ICMS).
+// Chamada no login e pode ser chamada a qualquer momento para sincronizar.
+async function _carregarParamsCalculo(){
+  const [rTaxas, rCustos, rOrigens, rIcms] = await Promise.all([
+    sb.from('taxas_pagamento').select('chave,taxa'),
+    sb.from('parametros_custos').select('chave,valor'),
+    sb.from('origens_pedido').select('chave,comissao,nome'),
+    sb.from('icms_estados').select('estado,aliquota_nacional,aliquota_importado,aliquota_frete')
+  ]);
+  if(rTaxas.data) rTaxas.data.forEach(function(r){ taxasDB[r.chave]=r.taxa; });
+  if(rCustos.data) rCustos.data.forEach(function(r){
+    if(r.chave==='CF')       CF       = r.valor;
+    if(r.chave==='CV_FIXO')  CV_FIXO  = r.valor;
   });
+  if(rOrigens.data) rOrigens.data.forEach(function(r){ origensDB[r.nome]=r.comissao; origensDB[r.chave]=r.comissao; });
+  if(rIcms.data) rIcms.data.forEach(function(r){ icmsDB[r.estado]={nat:r.aliquota_nacional,imp:r.aliquota_importado,frt:r.aliquota_frete}; });
+}
+let pedido=[];
+let usuarioAtual=null, isAdmin=false;
+let _negOverride=null;
+let _negFocused=false; // true enquanto o campo Negociação está com foco
 
-  if(ordemCol) aplicarOrdem();
-  paginaAtual = 1;
-  atualizarStats();
-  renderTabela();
-  renderPaginacao();
+const $=id=>document.getElementById(id);
+const brl=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const pct=v=>((v||0)*100).toFixed(2).replace('.',',')+'%';
+
+function toast(msg,t){
+  t=t||'ok';
+  const el=$('toast');el.textContent=msg;el.className='toast on '+t;
+  setTimeout(function(){el.classList.remove('on')},3000);
 }
 
-function limparFiltros(){
-  ['f-busca','f-fab','f-btu','f-ciclo','f-origem','f-estoque'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el.tagName==='INPUT') el.value=''; else el.value='';
-  });
-  aplicarFiltros();
+function calcMargem(preco,custo,uf,ufFrete,contrib,origemPct,comPct,taxaPgto){
+  const iuf=icmsDB[uf]||ICMS.SP;
+  const iufFrt=icmsDB[ufFrete||uf]||iuf;
+  const frete=iufFrt.frt||0.05;
+  const AE = preco * CV_FIXO;
+  const AF = contrib ? 0 : preco * iuf.nat;
+  const AG = preco * origemPct;
+  const AH = preco * comPct;
+  const AK = preco * frete;
+  const AL = preco * CF;
+  const taxa = preco * taxaPgto;
+  const AM = AE + AF + AG + AH + AK + AL;
+  const mg = preco>0 ? (preco - custo - AM - taxa) / preco : 0;
+  return {mg:mg, AE:AE, AF:AF, AG:AG, AH:AH, AK:AK, AL:AL, AM:AM, taxa:taxa, frete:frete};
 }
 
-function ordenar(col){
-  if(ordemCol===col){ ordemAsc=!ordemAsc; } else { ordemCol=col; ordemAsc=true; }
-  aplicarOrdem(); renderTabela(); renderPaginacao();
+// Versão parametrizada de calcMargem — usada pelo renderSnapshotAprov para
+// recalcular com os valores congelados no _params do snapshot (CF, CV_FIXO, icms).
+function calcMargemComParams(preco,custo,iufObj,ufFrete,contrib,origemPct,comPct,taxaPgto,cfParam,cvParam){
+  const iuf = iufObj || ICMS.SP;
+  const iufFrt = icmsDB[ufFrete] || iuf;
+  const frete = iufFrt.frt || 0.05;
+  const AE = preco * cvParam;
+  const AF = contrib ? 0 : preco * iuf.nat;
+  const AG = preco * origemPct;
+  const AH = preco * comPct;
+  const AK = preco * frete;
+  const AL = preco * cfParam;
+  const taxa = preco * taxaPgto;
+  const AM = AE + AF + AG + AH + AK + AL;
+  const mg = preco>0 ? (preco - custo - AM - taxa) / preco : 0;
+  return {mg:mg, AE:AE, AF:AF, AG:AG, AH:AH, AK:AK, AL:AL, AM:AM, taxa:taxa, frete:frete};
 }
 
-function aplicarOrdem(){
-  dadosFiltrados.sort((a,b)=>{
-    let va=a[ordemCol], vb=b[ordemCol];
-    if(typeof va==='string'){ va=va.toLowerCase(); vb=vb.toLowerCase(); }
-    return va<vb ? (ordemAsc?-1:1) : va>vb ? (ordemAsc?1:-1) : 0;
-  });
+function calcEquilibrio(custo, AM4, O36, taxaPgto){
+  if(O36<=0) return 0;
+  const AM3 = AM4 / O36;
+  let faixa = 0;
+  if(taxaPgto >= 0.052) faixa = 0.052;
+  else if(taxaPgto >= 0.0291) faixa = 0.038;
+  else if(taxaPgto >= 0.0267) faixa = 0.0163;
+  const denom = 1 - (AM3 + faixa);
+  if(denom <= 0) return 0;
+  return custo / denom;
 }
 
-function atualizarStats(){
-  const total  = dadosFiltrados.length;
-  const comEst = dadosFiltrados.filter(p=>p.estoque>0).length;
-  const mbVal  = dadosFiltrados.filter(p=>p.mb!==0);
-  const mbMed  = mbVal.length ? mbVal.reduce((s,p)=>s+p.mb,0)/mbVal.length : 0;
-  const fabs   = new Set(dadosFiltrados.map(p=>p.fabricante)).size;
-  const nac    = dadosFiltrados.filter(p=>p.origem==='NACIONAL').length;
-  const imp    = dadosFiltrados.filter(p=>p.origem==='IMPORTADO').length;
-  document.getElementById('stat-total').textContent   = total;
-  document.getElementById('stat-estoque').textContent = comEst;
-  document.getElementById('stat-mb').textContent      = pct(mbMed);
-  document.getElementById('stat-fab').textContent     = fabs;
-  document.getElementById('stat-orig').textContent    = nac+' / '+imp;
+async function carregarProdutos(){
+  const {data,error}=await sb.from('produtos')
+    .select('sku, fab:fabricante, chave, grupo, sub:sub_grupo, btus, ciclo, '+
+            'desc:descricao, custo, p8x:preco_8x, pav:preco_avista, origem')
+    .eq('ativo',true)
+    .order('sku');
+  if(error){throw new Error('Falha ao carregar produtos: '+error.message);}
+  PRODUTOS=data;
 }
 
-function renderTabela(){
-  const inicio = (paginaAtual-1)*POR_PAGINA;
-  const pagina = dadosFiltrados.slice(inicio, inicio+POR_PAGINA);
-  const tbody  = document.getElementById('tabela-body');
-  if(!pagina.length){ tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#999;">Nenhum produto encontrado.</td></tr>'; return; }
-  tbody.innerHTML = pagina.map(p=>{
-    const cicBadge = p.ciclo==='F'?'badge-F':p.ciclo==='QF'?'badge-QF':'badge-dash';
-    const origBadge = p.origem==='NACIONAL'?'<span class="badge badge-nac">NAC</span>':'<span class="badge badge-imp">IMP</span>';
-    const estClass  = p.estoque>0?'estoque-ok':'estoque-zero';
-    const custoTxt  = p.custo>0?moeda(p.custo):'<span class="custo-zero">—</span>';
-    const vistaTxt  = p.vista>0?moeda(p.vista):'<span class="custo-zero">—</span>';
-    const dezTxt    = p.dez_x>0?moeda(p.dez_x):'<span class="custo-zero">—</span>';
-    const mlClass   = p.ml>=0?'mb-pos':'mb-neg';
-    const mbClass   = p.mb>=0?'mb-pos':'mb-neg';
-    return `<tr>
-      <td>${p.fabricante}</td>
-      <td>${p.btus||'—'}</td>
-      <td><span class="badge ${cicBadge}">${p.ciclo}</span></td>
-      <td>${p.cod}</td>
-      <td style="white-space:normal;max-width:320px">${p.descricao}</td>
-      <td class="${estClass}">${p.estoque}</td>
-      <td>${custoTxt}</td>
-      <td>${vistaTxt}</td>
-      <td>${dezTxt}</td>
-      <td class="${mlClass}">${p.ml!==0?(p.ml*100).toFixed(1)+'%':'—'}</td>
-      <td class="${mbClass}">${p.mb!==0?(p.mb*100).toFixed(1)+'%':'—'}</td>
-      <td>${origBadge}</td>
-    </tr>`;
+async function fazerLogin(){
+  const email=$('l-email').value.trim(), senha=$('l-senha').value;
+  const err=$('l-err'); err.style.display='none';
+  if(!email||!senha){err.textContent='Preencha e-mail e senha.';err.style.display='block';return;}
+  const r=await sb.auth.signInWithPassword({email:email,password:senha});
+  if(r.error){
+    // Traduz mensagens do Supabase para PT-BR e diagnóstico claro
+    const msg=(r.error.message||'').toLowerCase();
+    let userMsg='E-mail ou senha incorretos.';
+    if(msg.includes('email not confirmed')){
+      userMsg='E-mail ainda não confirmado. Verifique sua caixa de entrada (e spam) e clique no link de confirmação.';
+    } else if(msg.includes('invalid login credentials')){
+      userMsg='E-mail ou senha incorretos. Se você acabou de ser cadastrado, confirme o e-mail primeiro.';
+    } else if(msg.includes('user not found')){
+      userMsg='Usuário não cadastrado. Entre em contato com o administrador.';
+    } else if(msg.includes('rate limit')||msg.includes('too many')){
+      userMsg='Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+    } else if(msg.includes('network')||msg.includes('fetch')){
+      userMsg='Erro de conexão. Verifique sua internet e tente novamente.';
+    } else if(r.error.message){
+      userMsg='Erro: '+r.error.message;
+    }
+    err.textContent=userMsg;
+    err.style.display='block';
+    console.error('Login error:',r.error);
+    return;
+  }
+  await iniciarApp(r.data.user);
+}
+async function iniciarApp(user){
+  usuarioAtual=user;
+  const meta=user.app_metadata||{};
+  isAdmin=meta.perfil==='admin';
+  $('tb-user').textContent=user.email.split('@')[0];
+  const now=new Date();
+  $('tb-date').textContent=now.toLocaleDateString('pt-BR')+' '+now.toTimeString().substring(0,5);
+  $('g-version').textContent='Tabela Maio/2026 v6 — '+now.toLocaleDateString('pt-BR')+' '+now.toTimeString().substring(0,5);
+  // Auto-fill consultor from user metadata
+  const consultorMeta = meta.consultor || '';
+  if(consultorMeta) $('g-consultor-input').value = consultorMeta;
+  $('tela-login').style.display='none';
+  $('tela-app').style.display='block';
+  if(isAdmin){$('tb-admin').style.display='';$('t-admin').style.display='';}
+  if(meta.alcada==='administrativo'){ aplicarRestricoesAdministrativo(meta); }
+  try{
+    await Promise.all([
+      carregarProdutos(),
+      carregarParametrosAprovacao(),
+      _carregarParamsCalculo()
+    ]);
+  }catch(e){
+    alert('Erro ao carregar produtos do banco: '+e.message+'\nO simulador não pode iniciar. Verifique a conexão e recarregue a página.');
+    await sb.auth.signOut(); location.reload(); return;
+  }
+  renderItens(); calcular(); carregarHist();
+
+  // Visibilidade por alçada
+  const ehDiretorLocal = (meta.alcada === 'diretor' || meta.alcada === 'analista');
+
+  // Ocultar apenas a célula de Custo (label + valor) para não-Diretores
+  // Rebate e Consultor ficam sempre visíveis
+  const custoCelLbl = document.querySelector('#g-custo-row-lbl .crc-cell:first-child');
+  const custoCelVal = $('g-custo');
+  if(custoCelLbl) custoCelLbl.style.visibility = ehDiretorLocal ? '' : 'hidden';
+  if(custoCelVal) custoCelVal.style.visibility = ehDiretorLocal ? '' : 'hidden';
+
+  // Rebate: editável apenas por Analista e Diretoria
+  const rebateInput = $('g-rebate-input');
+  if(rebateInput){
+    if(!ehDiretorLocal && !isAdmin){
+      rebateInput.disabled = true;
+      rebateInput.title = 'Rebate — somente Analista e Diretoria podem editar';
+      rebateInput.style.opacity = '0.6';
+      rebateInput.style.cursor = 'not-allowed';
+    }
+  }
+
+  // Custo na grade de itens: col-custo — controlado via CSS class no <table>
+  const itemsTable = document.querySelector('.items-table');
+  if(itemsTable){
+    if(ehDiretorLocal) itemsTable.classList.add('show-custo');
+    else itemsTable.classList.remove('show-custo');
+  }
+
+  // Iniciar sistema de notificações (apenas para aprovadores)
+  iniciarNotificacoes();
+}
+// ═══════════════════════════════════════════════════════════════
+// SISTEMA DE NOTIFICAÇÕES DE APROVAÇÃO PENDENTE
+// ═══════════════════════════════════════════════════════════════
+// Polling a cada 60s (quando alertas habilitados).
+// Preferência salva em localStorage: 'notif_ativo' = 'true'|'false'
+// IDs já vistos salvo em localStorage: 'notif_vistos' = JSON array
+// Visível apenas para aprovadores (supervisor, gestor, analista, diretor, admin)
+// ───────────────────────────────────────────────────────────────
+
+const NOTIF_ALCADAS_APROVADORAS = ['supervisor','gestor','analista','diretor'];
+const NOTIF_POLL_INTERVAL_MS = 60000; // 60 segundos
+let _notifTimer = null;
+let _notifPendentes = [];   // simulações pendentes atuais
+let _notifPopupAberto = false;
+let _notifToastSim = null;  // simulação exibida no toast atualmente
+
+// ── Inicialização ─────────────────────────────────────────────
+function iniciarNotificacoes(){
+  const ehAprovador = NOTIF_ALCADAS_APROVADORAS.includes(_alcadaUsuario) || isAdmin;
+  if(!ehAprovador) return;
+
+  // Mostrar o sino na topbar
+  const bell = $('notif-bell');
+  if(bell) bell.style.display = '';
+
+  // Restaurar preferência salva
+  const prefSalva = localStorage.getItem('notif_ativo');
+  const ativo = prefSalva === null ? true : prefSalva === 'true'; // padrão: ligado
+  const toggle = $('notif-toggle');
+  if(toggle) toggle.checked = ativo;
+
+  if(ativo) _iniciarPolling();
+}
+
+function salvarPreferenciaNotif(ativo){
+  localStorage.setItem('notif_ativo', ativo ? 'true' : 'false');
+  if(ativo){
+    _iniciarPolling();
+    verificarNotificacoes(); // checar imediatamente ao ligar
+  } else {
+    _pararPolling();
+    _limparBadge();
+  }
+}
+
+function _iniciarPolling(){
+  _pararPolling();
+  verificarNotificacoes();
+  _notifTimer = setInterval(verificarNotificacoes, NOTIF_POLL_INTERVAL_MS);
+}
+
+function _pararPolling(){
+  if(_notifTimer){ clearInterval(_notifTimer); _notifTimer = null; }
+}
+
+// ── Consulta ao banco ─────────────────────────────────────────
+async function verificarNotificacoes(){
+  if(!usuarioAtual) return;
+  try{
+    let q = sb.from('simulacoes')
+      .select('id,numero_sequencial,created_at,usuario_email,produto_sku,nivel_requerido,status,supervisor_email,gestor_email')
+      .in('status',['aguardando_aprovacao','encaminhado'])
+      .order('created_at',{ascending:false})
+      .limit(50);
+
+    // Filtrar conforme alçada — mesmo critério do carregarHist
+    if(_alcadaUsuario === 'supervisor'){
+      q = q.eq('supervisor_email', usuarioAtual.email);
+    } else if(_alcadaUsuario === 'gestor'){
+      // Busca rápida: simulações onde nivel_requerido é gestor/supervisor e gestor_email é o usuário
+      q = q.eq('gestor_email', usuarioAtual.email);
+    }
+    // analista, diretor e admin: sem filtro adicional — veem tudo
+
+    const {data, error} = await q;
+    if(error || !data) return;
+
+    // Filtrar apenas as que o usuário pode de fato aprovar
+    const pendentes = data.filter(function(s){
+      return _podeAprovarDireto(_alcadaUsuario, s.nivel_requerido);
+    });
+
+    _notifPendentes = pendentes;
+    _atualizarBadge(pendentes.length);
+    _atualizarListaPopup(pendentes);
+    _verificarNovas(pendentes);
+  }catch(e){ console.warn('Notif polling error:', e); }
+}
+
+// ── Badge no sino ─────────────────────────────────────────────
+function _atualizarBadge(qtd){
+  const badge = $('notif-badge');
+  if(!badge) return;
+  if(qtd > 0){
+    badge.textContent = qtd > 9 ? '9+' : qtd;
+    badge.style.display = 'flex';
+    $('notif-bell').style.outline = '2px solid rgba(231,76,60,.7)';
+  } else {
+    _limparBadge();
+  }
+}
+
+function _limparBadge(){
+  const badge = $('notif-badge');
+  if(badge) badge.style.display = 'none';
+  const bell = $('notif-bell');
+  if(bell) bell.style.outline = '';
+}
+
+// ── Popup ─────────────────────────────────────────────────────
+function toggleNotifPopup(){
+  const popup = $('notif-popup');
+  if(!popup) return;
+  _notifPopupAberto = !_notifPopupAberto;
+  popup.classList.toggle('on', _notifPopupAberto);
+  if(_notifPopupAberto){
+    // Fechar ao clicar fora
+    setTimeout(function(){
+      document.addEventListener('click', _fecharPopupFora, {once:true});
+    }, 50);
+    // Atualizar ao abrir
+    verificarNotificacoes();
+  }
+}
+
+function fecharNotifPopup(){
+  _notifPopupAberto = false;
+  const popup = $('notif-popup');
+  if(popup) popup.classList.remove('on');
+}
+
+function _fecharPopupFora(e){
+  const popup = $('notif-popup');
+  const bell  = $('notif-bell');
+  if(popup && !popup.contains(e.target) && e.target !== bell){
+    fecharNotifPopup();
+  }
+}
+
+function _atualizarListaPopup(pendentes){
+  const lista = $('notif-list');
+  if(!lista) return;
+  const vistos = _getVistos();
+
+  if(!pendentes.length){
+    lista.innerHTML = '<div class="notif-empty">Nenhuma simulação pendente. ✅</div>';
+    return;
+  }
+
+  lista.innerHTML = pendentes.map(function(s){
+    const isNova = !vistos.includes(s.id);
+    const nSeq = '#'+String(s.numero_sequencial).padStart(5,'0');
+    const nivelLabel = {supervisor:'Supervisor',gestor:'Gestor',analista:'Analista',diretor:'Diretor'}[s.nivel_requerido] || s.nivel_requerido;
+    const dt = new Date(s.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const sku = s.produto_sku || '—';
+    return '<div class="notif-item'+(isNova?' notif-new':'')+'" data-sid="'+s.id+'" onclick="_notifAbrirSim(this)">'
+      +'<div class="notif-item-icon">'+(isNova?'🟡':'🔵')+'</div>'
+      +'<div class="notif-item-body">'
+        +'<div class="notif-item-title">'+nSeq+' — '+_esc(sku)+'</div>'
+        +'<div class="notif-item-sub">'+_esc(s.usuario_email)+' · Nível: '+nivelLabel+'</div>'
+        +'<div class="notif-item-time">'+dt+'</div>'
+      +'</div>'
+      +'</div>';
   }).join('');
 }
 
-function renderPaginacao(){
-  const totalPag = Math.ceil(dadosFiltrados.length/POR_PAGINA);
-  const nav = document.getElementById('paginacao');
-  if(totalPag<=1){ nav.innerHTML=''; return; }
-  let html = `<button onclick="mudarPagina(${Math.max(1,paginaAtual-1)})"><</button>`;
-  for(let i=1;i<=totalPag;i++){
-    if(i===1||i===totalPag||Math.abs(i-paginaAtual)<=2)
-      html+=`<button class="${i===paginaAtual?'active':''}" onclick="mudarPagina(${i})">${i}</button>`;
-    else if(Math.abs(i-paginaAtual)===3) html+=`<span>…</span>`;
+function _notifAbrirSim(el){
+  const sid = el.dataset.sid;
+  fecharNotifPopup();
+  fecharNotifToast();
+  // Marcar como visto
+  _marcarVisto(sid);
+  // Abrir na aba de histórico
+  mudarTab('hist');
+  abrirModalAprov(sid);
+}
+
+// ── Toast de nova simulação ───────────────────────────────────
+let _notifUltimosIds = null; // null = primeira rodada, não mostra toast
+
+function _verificarNovas(pendentes){
+  if(_notifUltimosIds === null){
+    // Primeira verificação: apenas registra os IDs atuais, sem toast
+    _notifUltimosIds = pendentes.map(function(s){return s.id;});
+    return;
   }
-  html+=`<button onclick="mudarPagina(${Math.min(totalPag,paginaAtual+1)})">></button>`;
-  nav.innerHTML = html;
-}
-function mudarPagina(p){ paginaAtual=p; renderTabela(); renderPaginacao(); }
 
-function exportarCSV(){
-  if(!dadosFiltrados.length){ alert('Nenhum dado para exportar.'); return; }
-  const header = ['Fabricante','BTUs','Ciclo','Codigo','Descricao','Estoque','Custo','Vista','10x','ML','MB','Origem'];
-  const linhas = dadosFiltrados.map(p=>[
-    p.fabricante,p.btus,p.ciclo,p.cod,
-    `"${(p.descricao||'').replace(/"/g,'""')}"`,
-    p.estoque,p.custo,p.vista,p.dez_x,p.ml,p.mb,p.origem
-  ].join(';'));
-  const blob = new Blob([header.join(';')+'\n'+linhas.join('\n')],{type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='tabela_margem.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const novas = pendentes.filter(function(s){
+    return !_notifUltimosIds.includes(s.id);
+  });
+
+  _notifUltimosIds = pendentes.map(function(s){return s.id;});
+
+  if(!novas.length) return;
+
+  // Mostra toast para a mais recente
+  const s = novas[0];
+  const nSeq = '#'+String(s.numero_sequencial).padStart(5,'0');
+  const nivelLabel = {supervisor:'Supervisor',gestor:'Gestor',analista:'Analista',diretor:'Diretor'}[s.nivel_requerido] || s.nivel_requerido;
+  _notifToastSim = s.id;
+  const corpo = $('notif-toast-body');
+  if(corpo) corpo.innerHTML = 'Pedido <strong>'+nSeq+'</strong> de <strong>'+_esc(s.usuario_email)+'</strong><br>Aguarda aprovação: <strong>'+nivelLabel+'</strong>';
+  const toastEl = $('notif-toast');
+  if(toastEl) toastEl.classList.add('on');
+  // Auto-fechar em 12 segundos
+  setTimeout(fecharNotifToast, 12000);
+  // Notificação nativa do browser (se permitida)
+  _notifNativa(nSeq, s.usuario_email, nivelLabel);
 }
 
-function calcularMargem(){
-  const custo = parseFloat(document.getElementById('calc-custo').value||'0');
-  let venda   = parseFloat(document.getElementById('calc-venda').value||'0');
-  const forma = document.getElementById('calc-forma').value;
-  const desc  = parseFloat(document.getElementById('calc-desc').value||'0');
-  if(!custo||!venda){ alert('Informe custo e preço de venda.'); return; }
-  if(desc>0) venda=venda*(1-desc/100);
-  const mb = (venda-custo)/venda;
-  let totalDesp = CUSTOS.total_variavel+CUSTOS.custo_fixo;
-  if(forma==='dez_x') totalDesp+=CUSTOS.comissao_parc+CUSTOS.taxa_cartao;
-  const ml = (venda-custo-venda*totalDesp)/venda;
-  const lucro = venda-custo-venda*totalDesp;
-  document.getElementById('calc-results').style.display='flex';
-  document.getElementById('rv-final').textContent = moeda(venda);
-  document.getElementById('rv-mb').textContent    = (mb*100).toFixed(1)+'%';
-  document.getElementById('rv-ml').textContent    = (ml*100).toFixed(1)+'%';
-  document.getElementById('rv-lucro').textContent = moeda(lucro);
-  document.getElementById('rb-mb').className='result-box '+(mb>=0?'positive':'negative');
-  document.getElementById('rb-ml').className='result-box '+(ml>=0?'positive':'negative');
+function fecharNotifToast(){
+  const toastEl = $('notif-toast');
+  if(toastEl) toastEl.classList.remove('on');
+  _notifToastSim = null;
 }
-</script>
-</body>
-</html>
+
+function notifToastVerAgora(){
+  const sid = _notifToastSim;
+  fecharNotifToast();
+  if(sid){ mudarTab('hist'); abrirModalAprov(sid); }
+}
+
+// ── Marcar como vistas ────────────────────────────────────────
+function marcarTodasLidas(){
+  const ids = _notifPendentes.map(function(s){return s.id;});
+  localStorage.setItem('notif_vistos', JSON.stringify(ids));
+  _atualizarListaPopup(_notifPendentes);
+}
+
+function _marcarVisto(id){
+  const vistos = _getVistos();
+  if(!vistos.includes(id)){
+    vistos.push(id);
+    localStorage.setItem('notif_vistos', JSON.stringify(vistos));
+  }
+}
+
+function _getVistos(){
+  try{ return JSON.parse(localStorage.getItem('notif_vistos') || '[]'); }
+  catch(e){ return []; }
+}
+
+// ── Notificação nativa do browser ────────────────────────────
+function _notifNativa(nSeq, email, nivel){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'granted'){
+    new Notification('🔔 Nova simulação — DIS Comércio', {
+      body: 'Pedido '+nSeq+' de '+email+'\nAguarda: '+nivel,
+      icon: 
